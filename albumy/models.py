@@ -88,8 +88,8 @@ class Doctor(db.Model):
     cv = db.Column(db.String(150))  # the hospital name that doctor works.
     address = db.Column(db.String(200)) # the address of hospital.
     speciality = db.Column(db.String(150))
-    latitude = db.Column(db.String(20))
-    longitude = db.Column(db.String(20))
+    latitude = db.Column(db.String(20),default='35.392426')
+    longitude = db.Column(db.String(20),default='139.476048')
     id = db.Column(db.Integer,db.ForeignKey('user.id'),primary_key = True)
     
 
