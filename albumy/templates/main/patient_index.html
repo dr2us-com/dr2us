@@ -289,7 +289,7 @@
                       </li>
                      <li>
                         <span> Diagnosis by my doctor</span>
-                        <p>{{current_user.patient.family_history}}</p>
+                        <p>{{current_user.patient.diagnosis}}</p>
                       </li>  
                     </ul>
                     
@@ -322,9 +322,15 @@
 
                                 <h5>{% if comment.author.role.name == 'Doctor' %} Dr.{% endif %} {{comment.author.name}}</h5>
                                 {% if comment.author.role.name == 'Doctor' %}
-                                <div><span>Map</span> <span class="distance" lng={{comment.author.doctor.longitude}} lat={{comment.author.doctor.latitude}} > unknown</span></div>
+                                <div>
+                                  <span class="oi oi-map-marker"></span>
+                                  <span onclick = "show_map({{comment.author.doctor.longitude}} ,{{comment.author.doctor.latitude}})" style="cursor: pointer;">
+                                    Map
+                                  </span> 
+                                  <span class="distance" lng={{comment.author.doctor.longitude}} lat={{comment.author.doctor.latitude}} > unknown</span>
+                                </div>
                                 {% else %}
-                                <div><span>Map</span> <span> unknown</span></div>                                
+                                <div><span >Map</span> <span> unknown</span></div>                                
                                 {% endif %}
                                 <div><span>{{ comment.timestamp.strftime('%Y/%m/%d') }}</span></div>
                                 <div>
@@ -432,6 +438,7 @@
     <script src="{{ url_for('static', filename='js/owl.carousel.min.js') }}"></script>
     <script src="{{ url_for('static', filename='js/main.js') }}"></script>
     <script type="text/javascript">
+
         function star_changed(e){
             console.log(e.checked);
             var form_footer = e.parentElement.nextElementSibling;
@@ -486,7 +493,7 @@
     </script>
 
     <script type="text/javascript">
-        
+        var err_msg="Unknown Error";
         if (navigator.geolocation) {
             navigator.geolocation.getCurrentPosition(function(position) {
                 current_pos = {
@@ -507,6 +514,20 @@
             console.log(browserHasGeolocation ?
                                   'Error: The Geolocation service failed.' :
                                   'Error: Your browser doesn\'t support geolocation.');
+            err_msg = browserHasGeolocation ?
+                                  'Error: The Geolocation service failed.' :
+                                  'Error: Your browser doesn\'t support geolocation.';
+        }
+        function show_map(dst_lng,dst_lat){
+          if(current_pos!=null){
+            // var saddr = current_pos.lat + ","  + current_pos.lng;
+            var saddr="34.406676, 132.473370";
+            var daddr = dst_lat + ","  + dst_lng;
+            window.open('http://maps.google.com/maps?saddr=' +saddr + '&daddr=' + daddr , '_blank');
+          }else{
+            alert(err_msg)
+          }
+          
         }
     </script>
 

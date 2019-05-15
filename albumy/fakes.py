@@ -65,6 +65,7 @@ def fake_user(count=10):
             patient = Patient(chief_complaint = fake.sentence(),
                             present_illness = fake.sentence(),
                             past_history=fake.sentence(),
+                            diagnosis = fake.sentence(),
                             family_history = fake.sentence())
             user.patient = patient
         user.set_password('123456')

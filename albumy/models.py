@@ -98,6 +98,7 @@ class Patient(db.Model):
     present_illness = db.Column(db.String(300))
     past_history = db.Column(db.String(300))
     family_history = db.Column(db.String(300))
+    diagnosis = db.Column(db.String(300))
     id = db.Column(db.Integer,db.ForeignKey('user.id'),primary_key = True)
     
 # rater award the star to the user that has same id as awarded_id 
