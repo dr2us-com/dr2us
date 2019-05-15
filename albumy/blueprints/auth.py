@@ -11,7 +11,7 @@ from flask_login import login_user, logout_user, login_required, current_user, l
 from albumy.emails import send_confirm_email, send_reset_password_email
 from albumy.extensions import db
 from albumy.forms.auth import LoginForm, RegisterForm, ForgetPasswordForm, ResetPasswordForm
-from albumy.models import User
+from albumy.models import User,Doctor,Patient
 from albumy.settings import Operations
 from albumy.utils import generate_token, validate_token, redirect_back
 
