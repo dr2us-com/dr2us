@@ -14,7 +14,7 @@ from flask import current_app
 from sqlalchemy.exc import IntegrityError
 
 from albumy.extensions import db
-from albumy.models import User, Photo, Tag, Comment, Notification
+from albumy.models import User, Photo, Tag, Comment, Notification,Doctor,Patient,Role
 
 fake = Faker()
 
@@ -32,7 +32,18 @@ def fake_admin():
     db.session.add(admin)
     db.session.commit()
 
-
+def fake_hospital_cv():
+    lists = ["Silver Gardens Medical Clinic",
+        "Peace River General Hospital",
+        "Jade Forest Community Hospital",
+        "Hallmark Hospital",
+        "Healthbridge Medical Clinic",
+        "Great River Hospital Center",
+        "Peace Forest General Hospital",
+        "Bayview Community Hospital",
+        "Bayhealth General Hospital",
+        "Edgewater Community Hospital"]
+    return lists[random.randint(0, len(lists)-1)]
 def fake_user(count=10):
     for i in range(count):
         user = User(name=fake.name(),
@@ -43,6 +54,19 @@ def fake_user(count=10):
                     website=fake.url(),
                     member_since=fake.date_this_decade(),
                     email=fake.email())
+        if(user.role.name == 'Doctor'):
+            doctor = Doctor(cv = fake_hospital_cv(),
+                            speciality = fake.word(),
+                            address=fake.address(),
+                            latitude = str(fake.latitude()),
+                            longitude = str(fake.longitude()))
+            user.doctor = doctor
+        elif(user.role.name == 'Patient'):
+            patient = Patient(chief_complaint = fake.sentence(),
+                            present_illness = fake.sentence(),
+                            past_history=fake.sentence(),
+                            family_history = fake.sentence())
+            user.patient = patient
         user.set_password('123456')
         db.session.add(user)
         try:
@@ -106,12 +130,19 @@ def fake_collect(count=50):
 
 
 def fake_comment(count=100):
+    doctors = User.query.join(Role).filter(Role.name == 'Doctor').all()
     for i in range(count):
         comment = Comment(
-            author=User.query.get(random.randint(1, User.query.count())),
+            author=doctors[random.randint(0, len(doctors)-1)],
             body=fake.sentence(),
             timestamp=fake.date_time_this_year(),
             photo=Photo.query.get(random.randint(1, Photo.query.count()))
         )
+        # comment = Comment(
+        #     author=User.query.get(random.randint(1, User.query.count())),
+        #     body=fake.sentence(),
+        #     timestamp=fake.date_time_this_year(),
+        #     photo=Photo.query.get(random.randint(1, Photo.query.count()))
+        # )
         db.session.add(comment)
     db.session.commit()

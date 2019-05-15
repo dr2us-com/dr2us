@@ -14,6 +14,7 @@ from flask_login import UserMixin
 from werkzeug.security import generate_password_hash, check_password_hash
 
 from albumy.extensions import db, whooshee
+import random
 
 # relationship table
 roles_permissions = db.Table('roles_permissions',
@@ -39,10 +40,10 @@ class Role(db.Model):
         roles_permissions_map = {
             # 'Locked': ['FOLLOW', 'COLLECT'],
             # 'User': ['FOLLOW', 'COLLECT', 'COMMENT', 'UPLOAD'],
-            'Doctor': ['FOLLOW', 'COLLECT', 'COMMENT', 'UPLOAD'],
-            'Patient': ['FOLLOW', 'COLLECT', 'COMMENT', 'UPLOAD'],
+            'Doctor': ['FOLLOW', 'COLLECT', 'COMMENT', 'UPLOAD',],
+            'Patient': ['FOLLOW', 'COLLECT', 'COMMENT', 'UPLOAD','RATE'],
             # 'Moderator': ['FOLLOW', 'COLLECT', 'COMMENT', 'UPLOAD', 'MODERATE'],
-            # 'Administrator': ['FOLLOW', 'COLLECT', 'COMMENT', 'UPLOAD', 'MODERATE', 'ADMINISTER']
+            'Administrator': ['FOLLOW', 'COLLECT', 'COMMENT', 'UPLOAD', 'MODERATE', 'ADMINISTER','RATE']
         }
 
         for role_name in roles_permissions_map:
@@ -83,6 +84,32 @@ class Collect(db.Model):
     collector = db.relationship('User', back_populates='collections', lazy='joined')
     collected = db.relationship('Photo', back_populates='collectors', lazy='joined')
 
+class Doctor(db.Model):
+    cv = db.Column(db.String(150))  # the hospital name that doctor works.
+    address = db.Column(db.String(200)) # the address of hospital.
+    speciality = db.Column(db.String(150))
+    latitude = db.Column(db.String(20))
+    longitude = db.Column(db.String(20))
+    id = db.Column(db.Integer,db.ForeignKey('user.id'),primary_key = True)
+    
+
+class Patient(db.Model):
+    chief_complaint = db.Column(db.String(300))
+    present_illness = db.Column(db.String(300))
+    past_history = db.Column(db.String(300))
+    family_history = db.Column(db.String(300))
+    id = db.Column(db.Integer,db.ForeignKey('user.id'),primary_key = True)
+    
+# rater award the star to the user that has same id as awarded_id 
+class Rate(db.Model):
+    id = db.Column(db.Integer, primary_key=True)
+    rate_value = db.Column(db.Integer(),default=0)
+    timestamp = db.Column(db.DateTime, default=datetime.utcnow)
+    rater_id = db.Column(db.Integer, db.ForeignKey('user.id'))
+    awarded_id = db.Column(db.Integer, db.ForeignKey('user.id'))
+    rater = db.relationship('User',foreign_keys=[rater_id],back_populates='rates')       
+    awarded = db.relationship('User',foreign_keys=[awarded_id],back_populates='awards')
+
 
 @whooshee.register_model('name', 'username')
 class User(db.Model, UserMixin):
@@ -98,7 +125,8 @@ class User(db.Model, UserMixin):
     avatar_s = db.Column(db.String(64))
     avatar_m = db.Column(db.String(64))
     avatar_l = db.Column(db.String(64))
-    avatar_raw = db.Column(db.String(64))
+    avatar_raw = db.Column(db.String(64), default='default.jpg')
+    avatar_raw2 = db.Column(db.String(64),default='default2.jpg')
 
     confirmed = db.Column(db.Boolean, default=False)
     locked = db.Column(db.Boolean, default=False)
@@ -120,13 +148,22 @@ class User(db.Model, UserMixin):
                                 lazy='dynamic', cascade='all')
     followers = db.relationship('Follow', foreign_keys=[Follow.followed_id], back_populates='followed',
                                 lazy='dynamic', cascade='all')
+    rates = db.relationship('Rate', foreign_keys=[Rate.rater_id], back_populates='rater', cascade='all', lazy='dynamic')
+    awards = db.relationship('Rate', foreign_keys=[Rate.awarded_id], back_populates='awarded', cascade='all', lazy='dynamic')
+# added for doctor and patient
+    doctor = db.relationship('Doctor',backref = 'user',cascade='all, delete-orphan',uselist=False)
+    patient = db.relationship('Patient',backref = 'user',cascade='all, delete-orphan',uselist=False)
 
     def __init__(self, **kwargs):
         super(User, self).__init__(**kwargs)
         self.generate_avatar()
         self.follow(self)  # follow self
         self.set_role()
-
+    def spec(self):
+        if self.role.name == 'Doctor':
+            return self.doctor
+        elif self.role.name == 'Patient':
+            return self.patient
     def set_password(self, password):
         self.password_hash = generate_password_hash(password)
 
@@ -135,7 +172,11 @@ class User(db.Model, UserMixin):
             if self.email == current_app.config['ALBUMY_ADMIN_EMAIL']:
                 self.role = Role.query.filter_by(name='Administrator').first()
             else:
-                self.role = Role.query.filter_by(name='User').first()
+                randint = random.randint(1,2)
+                if randint == 1:
+                    self.role = Role.query.filter_by(name='Doctor').first()
+                if randint == 2:
+                    self.role = Role.query.filter_by(name='Patient').first()
             # db.session.commit()
     def set_role_with_name(self,name):
         self.role = Role.query.filter_by(name=name).first()
@@ -163,9 +204,16 @@ class User(db.Model, UserMixin):
     def is_followed_by(self, user):
         return self.followers.filter_by(follower_id=user.id).first() is not None
 
+    def get_rate_rated_by(self,user):        
+        return self.awards.filter_by(rater_id = user.id).first()
+
     @property
     def followed_photos(self):
         return Photo.query.join(Follow, Follow.followed_id == Photo.author_id).filter(Follow.follower_id == self.id)
+    @property
+    def last_uploaded_photo(self):
+        return Photo.query.filter(Photo.author_id == self.id).order_by(Photo.timestamp.desc()).first()
+    
 
     def collect(self, photo):
         if not self.is_collecting(photo):
@@ -208,6 +256,16 @@ class User(db.Model, UserMixin):
         self.avatar_l = filenames[2]
         # db.session.commit()
 
+        
+    def tags(self):
+        photos = self.photos
+        ret_tags = []
+        for photo in photos:
+            tags = photo.tags
+            for tag in tags:
+                if not tag in ret_tags:
+                    ret_tags.append(tag)
+        return ret_tags
     @property
     def is_admin(self):
         return self.role.name == 'Administrator'
@@ -297,3 +355,4 @@ def delete_photos(**kwargs):
         path = os.path.join(current_app.config['ALBUMY_UPLOAD_PATH'], filename)
         if os.path.exists(path):  # not every filename map a unique file
             os.remove(path)
+

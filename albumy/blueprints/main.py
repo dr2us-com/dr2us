@@ -22,8 +22,8 @@ from albumy.utils import rename_image, resize_image, redirect_back, flash_errors
 main_bp = Blueprint('main', __name__)
 
 
-@main_bp.route('/')
-def index():
+@main_bp.route('/prev_home')
+def prev_index():
     if current_user.is_authenticated:
         page = request.args.get('page', 1, type=int)
         per_page = current_app.config['ALBUMY_PHOTO_PER_PAGE']
@@ -33,11 +33,50 @@ def index():
             .order_by(Photo.timestamp.desc()) \
             .paginate(page, per_page)
         photos = pagination.items
+
     else:
         pagination = None
         photos = None
     tags = Tag.query.join(Tag.photos).group_by(Tag.id).order_by(func.count(Photo.id).desc()).limit(10)
     return render_template('main/index.html', pagination=pagination, photos=photos, tags=tags, Collect=Collect)
+
+
+@main_bp.route('/')
+def index():
+    if current_user.is_authenticated:
+        page = request.args.get('page', 1, type=int)
+        per_page = current_app.config['ALBUMY_PHOTO_PER_PAGE']
+
+        tags = Tag.query.join(Tag.photos).group_by(Tag.id).order_by(func.count(Photo.id).desc()).limit(10)
+        if(current_user.role.name == 'Doctor'):
+            pagination = current_user.following.paginate(page, per_page)
+            followings = pagination.items
+            awards = current_user.awards
+            awards_value = 0
+            for award in awards:
+                awards_value = awards_value + award.rate_value
+            return render_template('main/doctor_index.html', pagination=pagination, followings=followings, tags=tags,awards_value = awards_value)
+        if(current_user.role.name == 'Patient'):
+            photos = current_user.photos
+            photos_id_list = [item.id for item in photos]
+
+            pagination = Comment.query.filter(Comment.photo_id.in_(photos_id_list)).order_by(Comment.timestamp.desc()).paginate(page, per_page)
+            comments = pagination.items
+            return render_template('main/patient_index.html', pagination=pagination, comments=comments, tags=tags,photos = photos)
+        else:
+            pagination = Photo.query \
+            .join(Follow, Follow.followed_id == Photo.author_id) \
+            .filter(Follow.follower_id == current_user.id) \
+            .order_by(Photo.timestamp.desc()) \
+            .paginate(page, per_page)
+            photos = pagination.items
+            return render_template('main/index.html', pagination=pagination, photos=photos, tags=tags)
+    else:
+        pagination = None
+        followings = None
+
+    
+    return render_template('main/index.html')
 
 
 @main_bp.route('/explore')
@@ -111,7 +150,10 @@ def get_image(filename):
 
 @main_bp.route('/avatars/<path:filename>')
 def get_avatar(filename):
+    if not filename:
+        return send_from_directory(current_app.config['AVATARS_SAVE_PATH'], 'default.png')
     return send_from_directory(current_app.config['AVATARS_SAVE_PATH'], filename)
+
 
 
 @main_bp.route('/upload', methods=['GET', 'POST'])

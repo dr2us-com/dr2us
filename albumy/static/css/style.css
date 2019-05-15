@@ -13,7 +13,24 @@
 .hide {
     display: none;
 }
+.personal-info{
+    padding-left: 0px;
+}
 
+.personal-info li{
+    list-style: none;    
+}
+.personal-info li>span{
+    display: inline-block;    
+    vertical-align: top;
+    width: 42%;
+    text-transform: uppercase;
+    font-weight: bold
+}
+.personal-info li p{
+    display: inline-block;
+    width: 55%;
+}
 .inline {
     display: inline;
 }

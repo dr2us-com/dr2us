@@ -13,7 +13,7 @@ from albumy.emails import send_change_email_email
 from albumy.extensions import db, avatars
 from albumy.forms.user import EditProfileForm, UploadAvatarForm, CropAvatarForm, ChangeEmailForm, \
     ChangePasswordForm, NotificationSettingForm, PrivacySettingForm, DeleteAccountForm
-from albumy.models import User, Photo, Collect
+from albumy.models import User, Photo, Collect,Comment,Rate
 from albumy.notifications import push_follow_notification
 from albumy.settings import Operations
 from albumy.utils import generate_token, validate_token, redirect_back, flash_errors
@@ -37,6 +37,26 @@ def index(username):
     return render_template('user/index.html', user=user, pagination=pagination, photos=photos)
 
 
+@user_bp.route('/<username>/tags')
+def tags(username):
+    user = User.query.filter_by(username=username).first_or_404()
+    tags = user.tags()
+    return render_template('user/tags.html', user=user, tags=tags)
+
+
+@user_bp.route('/<username>/opinions')
+def opinions(username): # shows the comments that current user give to the username's photo.
+    user = User.query.filter_by(username=username).first_or_404()
+    photos = user.photos
+    photos_id_list = [item.id for item in photos]
+
+    page = request.args.get('page', 1, type=int)
+    per_page = current_app.config['ALBUMY_PHOTO_PER_PAGE']
+    pagination = Comment.query.with_parent(current_user).filter(Comment.photo_id.in_(photos_id_list)).order_by(Comment.timestamp.desc()).paginate(page, per_page)
+    comments = pagination.items
+    return render_template('user/opinions.html', user=user, pagination=pagination, comments=comments)
+
+
 @user_bp.route('/<username>/collections')
 def show_collections(username):
     user = User.query.filter_by(username=username).first_or_404()
@@ -45,6 +65,23 @@ def show_collections(username):
     pagination = Collect.query.with_parent(user).order_by(Collect.timestamp.desc()).paginate(page, per_page)
     collects = pagination.items
     return render_template('user/collections.html', user=user, pagination=pagination, collects=collects)
+
+
+@user_bp.route('/rate/<username>', methods=['POST'])
+@login_required
+@confirm_required
+@permission_required('RATE')
+def rate(username):
+    awarded_user = User.query.filter_by(username=username).first_or_404()    
+    print("======")
+    print(request.values)
+    rating_value = request.form.get('rating', 0, type=int)
+    rater = current_user
+    rate = Rate(rater = rater,awarded = awarded_user,rate_value = rating_value)
+    db.session.add(rate)
+    db.session.commit()
+    return redirect_back()
+
 
 
 @user_bp.route('/follow/<username>', methods=['POST'])
@@ -124,7 +161,7 @@ def edit_profile():
 def change_avatar():
     upload_form = UploadAvatarForm()
     crop_form = CropAvatarForm()
-    return render_template('user/settings/change_avatar.html', upload_form=upload_form, crop_form=crop_form)
+    return render_template('user/settings/change_avatar.html', upload_form=upload_form, crop_form=crop_form, sequence=1)
 
 
 @user_bp.route('/settings/avatar/upload', methods=['POST'])
@@ -160,6 +197,48 @@ def crop_avatar():
         flash('Avatar updated.', 'success')
     flash_errors(form)
     return redirect(url_for('.change_avatar'))
+
+
+@user_bp.route('/settings/avatar2')
+@login_required
+@confirm_required
+def change_avatar2():
+    upload_form = UploadAvatarForm()
+    crop_form = CropAvatarForm()
+    return render_template('user/settings/change_avatar.html', upload_form=upload_form, crop_form=crop_form,sequence=2)
+
+
+
+@user_bp.route('/settings/avatar2/upload', methods=['POST'])
+@login_required
+@confirm_required
+def upload_avatar2():
+    form = UploadAvatarForm()
+    if form.validate_on_submit():
+        image = form.image.data
+        filename = avatars.save_avatar(image)
+        current_user.avatar_raw2 = filename
+        db.session.commit()
+        flash('Image uploaded, please crop.', 'success')
+    flash_errors(form)
+    return redirect(url_for('.change_avatar'))
+
+
+@user_bp.route('/settings/avatar2/crop', methods=['POST'])
+@login_required
+@confirm_required
+def crop_avatar2():
+    form = CropAvatarForm()
+    if form.validate_on_submit():
+        x = form.x.data
+        y = form.y.data
+        w = form.w.data
+        h = form.h.data
+        filenames = avatars.crop_avatar(current_user.avatar_raw2, x, y, w, h)
+        db.session.commit()
+        flash('Avatar updated.', 'success')
+    flash_errors(form)
+    return redirect(url_for('.change_avatar2'))
 
 
 @user_bp.route('/settings/change-password', methods=['GET', 'POST'])

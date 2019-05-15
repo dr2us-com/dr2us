@@ -9,7 +9,34 @@
         </div>
     </div>
 {% endmacro %}
+{% macro represent_rate_with_start(cnt) %}
+    {% if cnt > 0 %}
+        <span class="oi oi-star"></span>
+    {% else %}
+        <span class="oi oi-star oi-grey"></span>
+    {% endif %}
+    {% if cnt > 1 %}
+        <span class="oi oi-star"></span>
+    {% else %}
+        <span class="oi oi-star oi-grey"></span>
+    {% endif %}
+    {% if cnt > 2 %}
+        <span class="oi oi-star"></span>
+    {% else %}
+        <span class="oi oi-star oi-grey"></span>
+    {% endif %}
+    {% if cnt > 3 %}
+        <span class="oi oi-star"></span>
+    {% else %}
+        <span class="oi oi-star oi-grey"></span>
+    {% endif %}
+    {% if cnt > 4 %}
+        <span class="oi oi-star"></span>
+    {% else %}
+        <span class="oi oi-star oi-grey"></span>
+    {% endif %}
 
+{% endmacro %}
 {% macro user_card(user) %}
     <div class="user-card text-center">
         <a href="{{ url_for('user.index', username=user.username) }}">

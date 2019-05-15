@@ -104,12 +104,12 @@ venv.bak/
 .mypy_cache/
 
 # Development
-#  *.db
-# .idea
-# uploads/*
-# !uploads/.gitkeep
-# !uploads/avatars
-# uploads/avatars/*
-# !uploads/avatars/.gitkeep
+ *.db
+.idea
+uploads/*
+!uploads/.gitkeep
+!uploads/avatars
+uploads/avatars/*
+!uploads/avatars/.gitkeep
 
 whooshee
