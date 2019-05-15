@@ -58,8 +58,8 @@ class BaseConfig:
     MAIL_PORT = 587
     MAIL_USE_SSL = False
     MAIL_USE_TLS = True
-    MAIL_USERNAME = os.getenv('MAIL_USERNAME','ambition.t109@gmail.com')
-    MAIL_PASSWORD = os.getenv('MAIL_PASSWORD','Generalpassword1')
+    MAIL_USERNAME = os.getenv('MAIL_USERNAME','dr2youandme@gmail.com')
+    MAIL_PASSWORD = os.getenv('MAIL_PASSWORD','jerryteam123')
     MAIL_DEFAULT_SENDER = ('Albumy Admin', MAIL_USERNAME)
     MAIL_DEBUG = True
     MAIL_SUPPRESS_SEND = False
