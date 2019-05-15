@@ -71,6 +71,18 @@ def register():
         password = form.password.data
         user = User(name=name, email=email, username=username)
         user.set_role_with_name(form.role.data)
+        if(form.role.data == 'Doctor'):
+            doctor = Doctor(cv = fake_hospital_cv(),
+                            speciality = fake.word(),
+                            address=fake.address())
+            user.doctor = doctor
+        elif(form.role.data == 'Patient'):
+            patient = Patient(chief_complaint = fake.sentence(),
+                            present_illness = fake.sentence(),
+                            past_history=fake.sentence(),
+                            diagnosis = fake.sentence(),
+                            family_history = fake.sentence())
+            user.patient = patient
         user.set_password(password)
         db.session.add(user)
         db.session.commit()
