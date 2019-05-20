@@ -26,7 +26,7 @@ class RegisterForm(FlaskForm):
     username = StringField('Username', validators=[DataRequired(), Length(1, 20),
                                                    Regexp('^[a-zA-Z0-9]*$',
                                                           message='The username should contain only a-z, A-Z and 0-9.')])
-    role = SelectField('Role',choices=[('Doctor','Doctor'),('Patient','Patient')])
+    role = SelectField('Role',choices=[("", "---"),('Doctor','Doctor'),('Patient','Patient')],validators=[DataRequired()])
     password = PasswordField('Password', validators=[
         DataRequired(), Length(8, 128), EqualTo('password2')])
     password2 = PasswordField('Confirm password', validators=[DataRequired()])

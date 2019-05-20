@@ -15,7 +15,7 @@ from sqlalchemy.sql.expression import func
 from albumy.decorators import confirm_required, permission_required
 from albumy.extensions import db
 from albumy.forms.main import DescriptionForm, TagForm, CommentForm
-from albumy.models import User, Photo, Tag, Follow, Collect, Comment, Notification
+from albumy.models import User, Photo, Tag, Follow, Collect, Comment, Notification,Doctor
 from albumy.notifications import push_comment_notification, push_collect_notification
 from albumy.utils import rename_image, resize_image, redirect_back, flash_errors
 
@@ -48,6 +48,7 @@ def index():
         per_page = current_app.config['ALBUMY_PHOTO_PER_PAGE']
 
         tags = Tag.query.join(Tag.photos).group_by(Tag.id).order_by(func.count(Photo.id).desc()).limit(10)
+        doctors = Doctor.query.all()
         if(current_user.role.name == 'Doctor'):
             pagination = current_user.following.paginate(page, per_page)
             followings = pagination.items
@@ -55,14 +56,14 @@ def index():
             awards_value = 0
             for award in awards:
                 awards_value = awards_value + award.rate_value
-            return render_template('main/doctor_index.html', pagination=pagination, followings=followings, tags=tags,awards_value = awards_value)
+            return render_template('main/doctor_index.html', pagination=pagination, followings=followings, tags=tags,awards_value = awards_value,doctors=doctors)
         if(current_user.role.name == 'Patient'):
             photos = current_user.photos
             photos_id_list = [item.id for item in photos]
 
             pagination = Comment.query.filter(Comment.photo_id.in_(photos_id_list)).order_by(Comment.timestamp.desc()).paginate(page, per_page)
             comments = pagination.items
-            return render_template('main/patient_index.html', pagination=pagination, comments=comments, tags=tags,photos = photos)
+            return render_template('main/patient_index.html', pagination=pagination, comments=comments, tags=tags,photos = photos,doctors=doctors)
         else:
             pagination = Photo.query \
             .join(Follow, Follow.followed_id == Photo.author_id) \
@@ -77,6 +78,12 @@ def index():
 
     
     return render_template('main/index.html')
+
+
+@main_bp.route('/agreement')
+def agreement():
+    
+    return render_template('main/agreement.html')
 
 
 @main_bp.route('/explore')

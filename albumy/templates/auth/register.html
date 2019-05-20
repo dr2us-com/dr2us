@@ -1,5 +1,5 @@
 {% extends 'base.html' %}
-{% from 'bootstrap/form.html' import render_form %}
+{% from 'bootstrap/form.html' import render_form,form_errors,render_field %}
 
 {% block title %}Register{% endblock %}
 
@@ -13,7 +13,23 @@
                 <div class="card mb-3 w-100 bg-light">
                     <div class="card-header"><h4>Welcome to Albumy!</h4></div>
                     <div class="card-body">
-                        {{ render_form(form) }}
+                        <form action="" method="post" class="form" role="form">
+                            {{ form.hidden_tag() }}
+                            {{ form_errors(form, hiddens='only') }}
+                            {%- for field in form %}
+                                {% if not bootstrap_is_hidden_field(field) and field.type != 'SubmitField' -%}
+                                    {{ render_field(field,
+                                        form_type=form_type,
+                                        horizontal_columns=horizontal_columns,
+                                        button_map={}) }}
+                                {%- endif %}
+                            {%- endfor %}
+                            <div class="form-check required">
+                                <input class="form-check-input" id="agreement" name="agreement" required="" type="checkbox" value="">
+                                <label class="form-check-label" for="agreement"> I agree to the <a href="/agreement" target="_blank">terms of service</a></label>
+                            </div>
+                            <input class="btn btn-secondary mt-2" id="submit" name="submit" type="submit" value="Submit">
+                        </form>
                         <hr>
                         <small>Already have an account? <a href="{{ url_for('.login') }}">Click here to log in.</a>
                         </small>

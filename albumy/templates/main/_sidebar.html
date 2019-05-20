@@ -1,11 +1,25 @@
-
-<div class="card bg-light mb-3 w-100">
-    <div class="card-header">Hot Tags</div>
-    <div class="list-group">
-        {% for tag in tags %}
-            <a class="list-group-item" href="{{ url_for('.show_tag', tag_id=tag.id) }}">{{ tag.name }}
-                <span class="badge badge-pill">{{ tag.photos|length }}</span>
-            </a>
-        {% endfor %}
-    </div>
+<div style="width: 50%;display: inline-block;">
+	<div class="card bg-light mb-3 w-100">
+	    <div class="card-header">Hot Tags</div>
+	    <div class="list-group">
+	        {% for tag in tags %}
+	            <a class="list-group-item" href="{{ url_for('.show_tag', tag_id=tag.id) }}">{{ tag.name }}
+	                <span class="badge badge-pill">{{ tag.photos|length }}</span>
+	            </a>
+	        {% endfor %}
+	    </div>
+	</div>
+</div>
+<div style="width: 50%;display: inline-block;margin-left: -5px;">
+	<div class="card bg-light mb-3 w-100">
+	    <div class="card-header">Doctor List</div>
+	    <div class="list-group">
+	        {% for doctor in doctors %}
+	        	{% if current_user.doctor != doctor %}
+		            <a class="list-group-item" style="color: #007bff;">{{ doctor.user.name }}
+		            </a>
+	            {% endif %}
+	        {% endfor %}
+	    </div>
+	</div>
 </div>

@@ -152,8 +152,8 @@ class User(db.Model, UserMixin):
     rates = db.relationship('Rate', foreign_keys=[Rate.rater_id], back_populates='rater', cascade='all', lazy='dynamic')
     awards = db.relationship('Rate', foreign_keys=[Rate.awarded_id], back_populates='awarded', cascade='all', lazy='dynamic')
 # added for doctor and patient
-    doctor = db.relationship('Doctor',backref = 'user',cascade='all, delete-orphan',uselist=False)
-    patient = db.relationship('Patient',backref = 'user',cascade='all, delete-orphan',uselist=False)
+    doctor = db.relationship('Doctor',backref = 'user', cascade='all, delete-orphan',uselist=False)
+    patient = db.relationship('Patient',backref = 'user', cascade='all, delete-orphan',uselist=False)
 
     def __init__(self, **kwargs):
         super(User, self).__init__(**kwargs)
