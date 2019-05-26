@@ -10,6 +10,9 @@
         <div class="col-md-3">
             <div class="nav nav-pills flex-column" role="tablist" aria-orientation="vertical">
                 {{ render_nav_item('user.edit_profile', 'Edit Profile') }}
+                {% if current_user.role.name == 'Doctor' %}
+                    {{ render_nav_item('user.edit_doctor_info', 'Edit Doctor Info') }}
+                {% endif %}
                 {{ render_nav_item('user.change_avatar', 'Change Avatar') }}
                 {{ render_nav_item('user.change_avatar2', 'Change Avatar2') }}
                 {{ render_nav_item('user.change_password', 'Change Password') }}

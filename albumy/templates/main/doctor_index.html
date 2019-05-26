@@ -84,7 +84,6 @@
                                     <span class="float-right" style="line-height: 45px;vertical-align: middle;" >
                                         <a class="pr-2" data-href="/ajax/profile/11" href="{{ url_for('user.tags', username=item.followed.username) }}">Tags</a>
                                         <a class="pr-2" data-href="/ajax/profile/11" href="{{ url_for('user.index', username=item.followed.username) }}">Photos</a>
-                                        <a class="pr-2" data-href="/ajax/profile/11" href="{{ url_for('user.opinions', username=item.followed.username) }}">Opinions</a>
                                         <span>
                                             <small >
                                                 {% if item.followed.last_uploaded_photo %}
@@ -143,15 +142,30 @@
         var geo_location = {
             lat: {{current_user.doctor.latitude}},lng: {{current_user.doctor.longitude}}
         };
-
+        var status = '{{current_user.doctor.status}}'
         map = new google.maps.Map(document.getElementById('map'), {
-          center: geo_location,
+          center: geo_location,          
           zoom: 6
         });
-        var marker = new google.maps.Marker({position: geo_location, map: map});
+         var contentString = '<div id="content">'+
+            '<div id="bodyContent">'+
+            'Location Not Found Correctly'+
+            '</div>'
+            '</div>';
+        if(status == 'OK'){
+            var marker = new google.maps.Marker({position: geo_location, map: map});
+
+        }else{
+            var infowindow = new google.maps.InfoWindow({
+              content: contentString,
+              position:geo_location
+            });
+            infowindow.open(map);
+        }
+        
       }
     </script>
-    <script src="https://maps.googleapis.com/maps/api/js?key=AIzaSyBzxpp0TIeope2vBgZjqDNHdz-xJYbQcyo&amp;callback=initMap" defer="" async=""> </script>
+    <script src="https://maps.googleapis.com/maps/api/js?key={{config['GOOGLE_MAP_API_KEY']}}&amp;callback=initMap" defer="" async=""> </script>
 
 
     

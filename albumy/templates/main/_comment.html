@@ -28,7 +28,7 @@
                         <a class="profile-popover"
                            data-href="{{ url_for('ajax.get_profile', user_id=comment.author.id) }}"
                            href="{{ url_for('user.index', username=comment.author.username) }}">
-                            {{ comment.author.name }}
+                           {% if comment.author.role.name == 'Doctor' %} Dr.{% endif %} {{comment.author.name}}
                         </a>
                         {% if comment.author == photo.author %}
                             <span class="badge badge-light">Author</span>
@@ -38,7 +38,19 @@
                             {{ moment(comment.timestamp).fromNow(refresh=True) }}
                         </small>
                         {% if current_user.is_authenticated %}
-                            <span class="float-right">
+                            <span class="float-right" style="text-align: right;">
+                            {% if comment.author.role.name == 'Doctor' %}
+                            <div style="display: inline-block;">
+                              <span class="oi oi-map-marker"></span>
+                              <span onclick = "show_map({{comment.author.doctor.longitude}} ,{{comment.author.doctor.latitude}})" style="cursor: pointer;">
+                                Map
+                              </span> 
+                              <span class="distance" lng={{comment.author.doctor.longitude}} lat={{comment.author.doctor.latitude}} > unknown</span>
+                            </div>
+                            {% else %}
+                            <div style="display: inline-block;"><span >Map</span> <span> unknown</span></div>                                
+                            {% endif %}
+                           
                             <span class="dropdown">
                                 <button class="btn btn-sm btn-light" type="button" id="dropdownMenuButton"
                                         data-toggle="dropdown"
@@ -46,30 +58,95 @@
                                 <span class="oi oi-ellipses"></span>
                                 </button>
                                 <span class="dropdown-menu" aria-labelledby="dropdownMenuButton">
-                                {% if current_user != comment.author %}
-                                    <a class="dropdown-item btn"
-                                       href="{{ url_for('.reply_comment', comment_id=comment.id) }}">
-                                    <span class="oi oi-comment-square"></span> Reply
-                                </a>
-                                {% endif %}
-                                {% if current_user == comment.author or current_user == photo.author or current_user.can('MODERATE') %}
-                                    <a class="dropdown-item" data-toggle="modal" href="#!"
-                                       data-href="{{ url_for('.delete_comment', comment_id=comment.id) }}"
-                                       data-target="#confirm-delete">
-                                    <span class="oi oi-trash" aria-hidden="true"></span> Delete
-                                  </a>
-                                {% endif %}
-                                {% if current_user != comment.author %}
-                                <form class="inline" method="post"
-                                      action="{{ url_for('.report_comment', comment_id=comment.id) }}">
-                                    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
-                                    <button type="submit" class="dropdown-item">
-                                        <span class="oi oi-warning" aria-hidden="true"></span> Report
-                                      </button>
-                                </form>
-                                {% endif %}
+                                    {% if current_user != comment.author %}
+                                        <a class="dropdown-item btn"
+                                           href="{{ url_for('.reply_comment', comment_id=comment.id) }}">
+                                        <span class="oi oi-comment-square"></span> Reply
+                                    </a>
+                                    {% endif %}
+                                    {% if current_user == comment.author or current_user == photo.author or current_user.can('MODERATE') %}
+                                        <a class="dropdown-item" data-toggle="modal" href="#!"
+                                           data-href="{{ url_for('.delete_comment', comment_id=comment.id) }}"
+                                           data-target="#confirm-delete">
+                                        <span class="oi oi-trash" aria-hidden="true"></span> Delete
+                                      </a>
+                                    {% endif %}
+                                    {% if current_user != comment.author %}
+                                    <form class="inline" method="post"
+                                          action="{{ url_for('.report_comment', comment_id=comment.id) }}">
+                                        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                                        <button type="submit" class="dropdown-item">
+                                            <span class="oi oi-warning" aria-hidden="true"></span> Report
+                                          </button>
+                                    </form>
+                                    {% endif %}
                                 </span>
-                                </span>
+                                 <div style="text-align: right;">
+                                    {% set rate = comment.author.get_rate_rated_by(current_user) %}
+                                    {% if rate %} 
+                                        {{represent_rate_with_star(rate.rate_value)}}
+                                    {% else %}
+                                        <div style="position: relative;">
+                                            <button class="btn btn-outline-primary btn-sm" onclick="show_rate_form(this)">Rate the doctor</button>
+                                        </div>
+                                            
+                                        <form onreset="reset_form(this)" class="rating-form display-none" action="{{url_for('user.rate', username=comment.author.username)}}" method="post" name="rating-movie1">
+                                          <fieldset class="form-group">
+                                            <legend class="form-legend">Rating:</legend>
+                                            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                                            <div class="form-item" style="margin-right: 30px;">
+                                              
+                                              <input id="rating-5-{{comment.id}}" name="rating" type="radio" value="5" onchange="star_changed(this)"/>
+                                              <label for="rating-5-{{comment.id}}" data-value="5">
+                                                <span class="rating-star">
+                                                  <span class="oi oi-star oi-grey"></span>
+                                                  <span class="oi oi-star oi-black"></span>
+                                                </span>
+                                                <span class="ir">5</span>
+                                              </label>
+                                              <input id="rating-4-{{comment.id}}" name="rating" type="radio" value="4" onchange="star_changed(this)"/>
+                                              <label for="rating-4-{{comment.id}}" data-value="4">
+                                                <span class="rating-star">
+                                                  <span class="oi oi-star oi-grey"></span>
+                                                  <span class="oi oi-star oi-black"></span>
+                                                </span>
+                                                <span class="ir">4</span>
+                                              </label>
+                                              <input id="rating-3-{{comment.id}}" name="rating" type="radio" value="3" onchange="star_changed(this)"/>
+                                              <label for="rating-3-{{comment.id}}" data-value="3">
+                                                <span class="rating-star">
+                                                  <span class="oi oi-star oi-grey"></span>
+                                                  <span class="oi oi-star oi-black"></span>
+                                                </span>
+                                                <span class="ir">3</span>
+                                              </label>
+                                              <input id="rating-2-{{comment.id}}" name="rating" type="radio" value="2" onchange="star_changed(this)"/>
+                                              <label for="rating-2-{{comment.id}}" data-value="2">
+                                                <span class="rating-star">
+                                                  <span class="oi oi-star oi-grey"></span>
+                                                  <span class="oi oi-star oi-black"></span>
+                                                </span>
+                                                <span class="ir">2</span>
+                                              </label>
+                                              <input id="rating-1-{{comment.id}}" name="rating" type="radio" value="1" onchange="star_changed(this)" />
+                                              <label for="rating-1-{{comment.id}}" data-value="1">
+                                                <span class="rating-star">
+                                                  <span class="oi oi-star oi-grey"></span>
+                                                  <span class="oi oi-star oi-black"></span>
+                                                </span>
+                                                <span class="ir">1</span>
+                                              </label>
+                                            </div>
+                                            <div class="form-footer display-none">
+                                              <div class="form-action">
+                                                <input class="btn btn-outline-secondary btn-sm" type="reset" value="Reset" onclick="reset(this)"/>   
+                                                <input class="btn btn-outline-primary btn-sm" type="submit" value="Rate">
+                                              </div>
+                                            </div>
+                                          </fieldset>
+                                        </form>
+                                    {% endif %}
+                                </div>
                             </span>
                         {% endif %}
                     </h6>

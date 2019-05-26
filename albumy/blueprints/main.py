@@ -50,6 +50,8 @@ def index():
         tags = Tag.query.join(Tag.photos).group_by(Tag.id).order_by(func.count(Photo.id).desc()).limit(10)
         doctors = Doctor.query.all()
         if(current_user.role.name == 'Doctor'):
+            if(current_user.doctor.address == '' or current_user.doctor.cv =='' or current_user.doctor.speciality == ''):
+                return redirect(url_for('user.edit_doctor_info'))
             pagination = current_user.following.paginate(page, per_page)
             followings = pagination.items
             awards = current_user.awards
@@ -58,12 +60,13 @@ def index():
                 awards_value = awards_value + award.rate_value
             return render_template('main/doctor_index.html', pagination=pagination, followings=followings, tags=tags,awards_value = awards_value,doctors=doctors)
         if(current_user.role.name == 'Patient'):
-            photos = current_user.photos
-            photos_id_list = [item.id for item in photos]
+            return redirect(url_for('user.index',username=current_user.username))
+            # photos = current_user.photos
+            # photos_id_list = [item.id for item in photos]
 
-            pagination = Comment.query.filter(Comment.photo_id.in_(photos_id_list)).order_by(Comment.timestamp.desc()).paginate(page, per_page)
-            comments = pagination.items
-            return render_template('main/patient_index.html', pagination=pagination, comments=comments, tags=tags,photos = photos,doctors=doctors)
+            # pagination = Comment.query.filter(Comment.photo_id.in_(photos_id_list)).order_by(Comment.timestamp.desc()).paginate(page, per_page)
+            # comments = pagination.items
+            # return render_template('main/patient_index.html', pagination=pagination, comments=comments, tags=tags,photos = photos,doctors=doctors)
         else:
             pagination = Photo.query \
             .join(Follow, Follow.followed_id == Photo.author_id) \

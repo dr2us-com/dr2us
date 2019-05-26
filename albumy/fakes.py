@@ -14,7 +14,7 @@ from flask import current_app
 from sqlalchemy.exc import IntegrityError
 
 from albumy.extensions import db
-from albumy.models import User, Photo, Tag, Comment, Notification,Doctor,Patient,Role
+from albumy.models import User, Photo, Tag, Comment, Notification,Doctor,Role
 
 fake = Faker()
 
@@ -61,13 +61,13 @@ def fake_user(count=10):
                             latitude = str(fake.latitude()),
                             longitude = str(fake.longitude()))
             user.doctor = doctor
-        elif(user.role.name == 'Patient'):
-            patient = Patient(chief_complaint = fake.sentence(),
-                            present_illness = fake.sentence(),
-                            past_history=fake.sentence(),
-                            diagnosis = fake.sentence(),
-                            family_history = fake.sentence())
-            user.patient = patient
+        # elif(user.role.name == 'Patient'):
+        #     patient = Patient(chief_complaint = fake.sentence(),
+        #                     present_illness = fake.sentence(),
+        #                     past_history=fake.sentence(),
+        #                     diagnosis = fake.sentence(),
+        #                     family_history = fake.sentence())
+        #     user.patient = patient
         user.set_password('123456')
         db.session.add(user)
         try:

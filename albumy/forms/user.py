@@ -29,6 +29,13 @@ class EditProfileForm(FlaskForm):
             raise ValidationError('The username is already in use.')
 
 
+class EditDoctorInfoForm(FlaskForm):
+    cv = StringField('CV', validators=[DataRequired(), Length(1, 150)])
+    address = StringField('Address of Hospital', validators=[DataRequired()])
+    speciality = StringField('Speciality', validators=[DataRequired()])
+    submit = SubmitField()
+    
+
 class UploadAvatarForm(FlaskForm):
     image = FileField('Upload', validators=[
         FileRequired(),

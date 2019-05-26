@@ -12,11 +12,11 @@ from albumy.decorators import confirm_required, permission_required
 from albumy.emails import send_change_email_email
 from albumy.extensions import db, avatars
 from albumy.forms.user import EditProfileForm, UploadAvatarForm, CropAvatarForm, ChangeEmailForm, \
-    ChangePasswordForm, NotificationSettingForm, PrivacySettingForm, DeleteAccountForm
+    ChangePasswordForm, NotificationSettingForm, PrivacySettingForm, DeleteAccountForm,EditDoctorInfoForm
 from albumy.models import User, Photo, Collect,Comment,Rate
 from albumy.notifications import push_follow_notification
 from albumy.settings import Operations
-from albumy.utils import generate_token, validate_token, redirect_back, flash_errors
+from albumy.utils import generate_token, validate_token, redirect_back, flash_errors, get_geo_code_from_address
 
 user_bp = Blueprint('user', __name__)
 
@@ -43,18 +43,18 @@ def tags(username):
     tags = user.tags()
     return render_template('user/tags.html', user=user, tags=tags)
 
+# deprecated by Lee.
+# @user_bp.route('/<username>/opinions')
+# def opinions(username): # shows the comments that current user give to the username's photo.
+#     user = User.query.filter_by(username=username).first_or_404()
+#     photos = user.photos
+#     photos_id_list = [item.id for item in photos]
 
-@user_bp.route('/<username>/opinions')
-def opinions(username): # shows the comments that current user give to the username's photo.
-    user = User.query.filter_by(username=username).first_or_404()
-    photos = user.photos
-    photos_id_list = [item.id for item in photos]
-
-    page = request.args.get('page', 1, type=int)
-    per_page = current_app.config['ALBUMY_PHOTO_PER_PAGE']
-    pagination = Comment.query.with_parent(current_user).filter(Comment.photo_id.in_(photos_id_list)).order_by(Comment.timestamp.desc()).paginate(page, per_page)
-    comments = pagination.items
-    return render_template('user/opinions.html', user=user, pagination=pagination, comments=comments)
+#     page = request.args.get('page', 1, type=int)
+#     per_page = current_app.config['ALBUMY_PHOTO_PER_PAGE']
+#     pagination = Comment.query.with_parent(current_user).filter(Comment.photo_id.in_(photos_id_list)).order_by(Comment.timestamp.desc()).paginate(page, per_page)
+#     comments = pagination.items
+#     return render_template('user/opinions.html', user=user, pagination=pagination, comments=comments)
 
 
 @user_bp.route('/<username>/collections')
@@ -152,6 +152,30 @@ def edit_profile():
     form.bio.data = current_user.bio
     form.website.data = current_user.website
     form.location.data = current_user.location
+    return render_template('user/settings/edit_profile.html', form=form)
+
+
+@user_bp.route('/settings/doctor_info', methods=['GET', 'POST'])
+@login_required
+@confirm_required
+def edit_doctor_info():
+    form = EditDoctorInfoForm()
+    doctor = current_user.doctor    
+    if form.validate_on_submit():
+        doctor.cv = form.cv.data
+        doctor.address = form.address.data
+        doctor.speciality = form.speciality.data
+        location,status = get_geo_code_from_address(doctor.address)
+        if status != 'NOT FOUND':
+            doctor.latitude = location[0]
+            doctor.longitude = location[1]
+        doctor.status = status
+        db.session.commit()
+        flash('Doctor Info updated.', 'success')
+        return redirect('/')
+    form.cv.data = doctor.cv
+    form.address.data = doctor.address
+    form.speciality.data = doctor.speciality
     return render_template('user/settings/edit_profile.html', form=form)
 
 

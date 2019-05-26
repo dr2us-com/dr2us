@@ -41,7 +41,7 @@ class Role(db.Model):
             # 'Locked': ['FOLLOW', 'COLLECT'],
             # 'User': ['FOLLOW', 'COLLECT', 'COMMENT', 'UPLOAD'],
             'Doctor': ['FOLLOW', 'COLLECT', 'COMMENT', 'UPLOAD',],
-            'Patient': ['FOLLOW', 'COLLECT', 'COMMENT', 'UPLOAD','RATE'],
+            'Patient': ['FOLLOW', 'COLLECT', 'UPLOAD','RATE'],
             # 'Moderator': ['FOLLOW', 'COLLECT', 'COMMENT', 'UPLOAD', 'MODERATE'],
             'Administrator': ['FOLLOW', 'COLLECT', 'COMMENT', 'UPLOAD', 'MODERATE', 'ADMINISTER','RATE']
         }
@@ -90,16 +90,17 @@ class Doctor(db.Model):
     speciality = db.Column(db.String(150))
     latitude = db.Column(db.String(20),default='35.392426')
     longitude = db.Column(db.String(20),default='139.476048')
+    status = db.Column(db.String(20),default = 'BAD')
     id = db.Column(db.Integer,db.ForeignKey('user.id'),primary_key = True)
     
 
-class Patient(db.Model):
-    chief_complaint = db.Column(db.String(300))
-    present_illness = db.Column(db.String(300))
-    past_history = db.Column(db.String(300))
-    family_history = db.Column(db.String(300))
-    diagnosis = db.Column(db.String(300))
-    id = db.Column(db.Integer,db.ForeignKey('user.id'),primary_key = True)
+# class Patient(db.Model):
+#     chief_complaint = db.Column(db.String(300))
+#     present_illness = db.Column(db.String(300))
+#     past_history = db.Column(db.String(300))
+#     family_history = db.Column(db.String(300))
+#     diagnosis = db.Column(db.String(300))
+#     id = db.Column(db.Integer,db.ForeignKey('user.id'),primary_key = True)
     
 # rater award the star to the user that has same id as awarded_id 
 class Rate(db.Model):
@@ -153,7 +154,7 @@ class User(db.Model, UserMixin):
     awards = db.relationship('Rate', foreign_keys=[Rate.awarded_id], back_populates='awarded', cascade='all', lazy='dynamic')
 # added for doctor and patient
     doctor = db.relationship('Doctor',backref = 'user', cascade='all, delete-orphan',uselist=False)
-    patient = db.relationship('Patient',backref = 'user', cascade='all, delete-orphan',uselist=False)
+    # patient = db.relationship('Patient',backref = 'user', cascade='all, delete-orphan',uselist=False)
 
     def __init__(self, **kwargs):
         super(User, self).__init__(**kwargs)

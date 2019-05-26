@@ -7,7 +7,7 @@
 """
 import os
 import uuid
-
+import googlemaps
 try:
     from urlparse import urlparse, urljoin
 except ImportError:
@@ -22,6 +22,21 @@ from itsdangerous import TimedJSONWebSignatureSerializer as Serializer
 from albumy.extensions import db
 from albumy.models import User
 from albumy.settings import Operations
+
+
+gmaps = None
+
+def get_geo_code_from_address(address):
+    global gmaps
+    if not gmaps:
+        gmaps = googlemaps.Client(key=current_app.config['GOOGLE_MAP_API_KEY'])
+    geocode_result = gmaps.geocode(address)
+    if len(geocode_result) == 1:
+        return list(geocode_result[0]['geometry']['location'].values()),'OK'
+    elif len(geocode_result) > 1:
+        return list(geocode_result[0]['geometry']['location'].values()),'BAD'
+    else:
+       return [0,0],'NOT FOUND'
 
 
 def generate_token(user, operation, expire_in=None, **kwargs):

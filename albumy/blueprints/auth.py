@@ -11,7 +11,7 @@ from flask_login import login_user, logout_user, login_required, current_user, l
 from albumy.emails import send_confirm_email, send_reset_password_email
 from albumy.extensions import db
 from albumy.forms.auth import LoginForm, RegisterForm, ForgetPasswordForm, ResetPasswordForm
-from albumy.models import User,Doctor,Patient
+from albumy.models import User,Doctor
 from albumy.fakes import fake,fake_hospital_cv
 from albumy.settings import Operations
 from albumy.utils import generate_token, validate_token, redirect_back
@@ -73,17 +73,18 @@ def register():
         user = User(name=name, email=email, username=username)
         user.set_role_with_name(form.role.data)
         if(form.role.data == 'Doctor'):
-            doctor = Doctor(cv = fake_hospital_cv(),
-                            speciality = fake.word(),
-                            address=fake.address())
+            doctor = Doctor()
+            # doctor = Doctor(cv = fake_hospital_cv(),
+            #                 speciality = fake.word(),
+            #                 address=fake.address())
             user.doctor = doctor
-        elif(form.role.data == 'Patient'):
-            patient = Patient(chief_complaint = fake.sentence(),
-                            present_illness = fake.sentence(),
-                            past_history=fake.sentence(),
-                            diagnosis = fake.sentence(),
-                            family_history = fake.sentence())
-            user.patient = patient
+        # elif(form.role.data == 'Patient'):
+        #     patient = Patient(chief_complaint = fake.sentence(),
+        #                     present_illness = fake.sentence(),
+        #                     past_history=fake.sentence(),
+        #                     diagnosis = fake.sentence(),
+        #                     family_history = fake.sentence())
+        #     user.patient = patient
         user.set_password(password)
         db.session.add(user)
         db.session.commit()
