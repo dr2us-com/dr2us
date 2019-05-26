@@ -85,7 +85,7 @@
                                     {% set rate = comment.author.get_rate_rated_by(photo) %}
                                     {% if rate %} 
                                         {{represent_rate_with_star(rate.rate_value)}}
-                                    {% elif comment.author == current_user %}
+                                    {% elif photo.author == current_user %}
                                         <div style="position: relative;">
                                             <button class="btn btn-outline-primary btn-sm" onclick="show_rate_form(this)">Rate the doctor</button>
                                         </div>
