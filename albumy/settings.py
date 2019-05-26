@@ -70,7 +70,7 @@ class BaseConfig:
     DROPZONE_ENABLE_CSRF = True
 
     WHOOSHEE_MIN_STRING_LEN = 1
-    GOOGLE_MAP_API_KEY = 'AIzaSyBzxpp0TIeope2vBgZjqDNHdz-xJYbQcyo'
+    GOOGLE_MAP_API_KEY = 'Your Api Key'
 
 
 class DevelopmentConfig(BaseConfig):
