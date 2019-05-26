@@ -107,9 +107,10 @@ class Rate(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     rate_value = db.Column(db.Integer(),default=0)
     timestamp = db.Column(db.DateTime, default=datetime.utcnow)
-    rater_id = db.Column(db.Integer, db.ForeignKey('user.id'))
+    rater_photo_id = db.Column(db.Integer, db.ForeignKey('photo.id'))
     awarded_id = db.Column(db.Integer, db.ForeignKey('user.id'))
-    rater = db.relationship('User',foreign_keys=[rater_id],back_populates='rates')       
+    
+    rater_photo = db.relationship('Photo',foreign_keys=[rater_photo_id],back_populates='rates')
     awarded = db.relationship('User',foreign_keys=[awarded_id],back_populates='awards')
 
 
@@ -150,7 +151,7 @@ class User(db.Model, UserMixin):
                                 lazy='dynamic', cascade='all')
     followers = db.relationship('Follow', foreign_keys=[Follow.followed_id], back_populates='followed',
                                 lazy='dynamic', cascade='all')
-    rates = db.relationship('Rate', foreign_keys=[Rate.rater_id], back_populates='rater', cascade='all', lazy='dynamic')
+    
     awards = db.relationship('Rate', foreign_keys=[Rate.awarded_id], back_populates='awarded', cascade='all', lazy='dynamic')
 # added for doctor and patient
     doctor = db.relationship('Doctor',backref = 'user', cascade='all, delete-orphan',uselist=False)
@@ -206,8 +207,10 @@ class User(db.Model, UserMixin):
     def is_followed_by(self, user):
         return self.followers.filter_by(follower_id=user.id).first() is not None
 
-    def get_rate_rated_by(self,user):        
-        return self.awards.filter_by(rater_id = user.id).first()
+    # def get_rate_rated_by(self,user):        
+    #     return self.awards.filter_by(rater_id = user.id).first()
+    def get_rate_rated_by(self,photo):        
+        return self.awards.filter_by(rater_photo_id = photo.id).first()
 
     @property
     def followed_photos(self):
@@ -299,6 +302,7 @@ class Photo(db.Model):
     flag = db.Column(db.Integer, default=0)
     author_id = db.Column(db.Integer, db.ForeignKey('user.id'))
 
+    rates = db.relationship('Rate', foreign_keys=[Rate.rater_photo_id], back_populates='rater_photo', cascade='all', lazy='dynamic') # get the rate data that are given by this photo user
     author = db.relationship('User', back_populates='photos')
     comments = db.relationship('Comment', back_populates='photo', cascade='all')
     collectors = db.relationship('Collect', back_populates='collected', cascade='all')

@@ -67,17 +67,17 @@ def show_collections(username):
     return render_template('user/collections.html', user=user, pagination=pagination, collects=collects)
 
 
-@user_bp.route('/rate/<username>', methods=['POST'])
+@user_bp.route('/rate/<int:photo_id>/<username>', methods=['POST'])
 @login_required
 @confirm_required
 @permission_required('RATE')
-def rate(username):
+def rate(photo_id,username):
     awarded_user = User.query.filter_by(username=username).first_or_404()    
     print("======")
     print(request.values)
     rating_value = request.form.get('rating', 0, type=int)
-    rater = current_user
-    rate = Rate(rater = rater,awarded = awarded_user,rate_value = rating_value)
+    rater_photo = Photo.query.get_or_404(photo_id)
+    rate = Rate(rater_photo = rater_photo,awarded = awarded_user,rate_value = rating_value)
     db.session.add(rate)
     db.session.commit()
     return redirect_back()

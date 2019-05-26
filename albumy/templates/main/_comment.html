@@ -82,7 +82,7 @@
                                     {% endif %}
                                 </span>
                                  <div style="text-align: right;">
-                                    {% set rate = comment.author.get_rate_rated_by(current_user) %}
+                                    {% set rate = comment.author.get_rate_rated_by(photo) %}
                                     {% if rate %} 
                                         {{represent_rate_with_star(rate.rate_value)}}
                                     {% else %}
@@ -90,7 +90,7 @@
                                             <button class="btn btn-outline-primary btn-sm" onclick="show_rate_form(this)">Rate the doctor</button>
                                         </div>
                                             
-                                        <form onreset="reset_form(this)" class="rating-form display-none" action="{{url_for('user.rate', username=comment.author.username)}}" method="post" name="rating-movie1">
+                                        <form onreset="reset_form(this)" class="rating-form display-none" action="{{url_for('user.rate', username=comment.author.username,photo_id=photo.id)}}" method="post" name="rating-movie1">
                                           <fieldset class="form-group">
                                             <legend class="form-legend">Rating:</legend>
                                             <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
