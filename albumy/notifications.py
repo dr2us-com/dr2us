@@ -35,3 +35,28 @@ def push_collect_notification(collector, photo_id, receiver):
     notification = Notification(message=message, receiver=receiver)
     db.session.add(notification)
     db.session.commit()
+
+
+def push_invite_notification(photo, receiver):
+    message = '<a href="%s" > You have received the invite request from "%s" </a>' % \
+              (url_for('main.show_photo', photo_id=photo.id), photo.author.username)
+    notification = Notification(message=message, receiver=receiver)
+    db.session.add(notification)
+    db.session.commit()
+
+
+def push_reinvite_notification(photo, sender):
+    message = '<a href="%s" > Your request for Dr %s  has been rejected because of unexpected error. But don\'t worry. You can Hire him again.</a>' % \
+              (url_for('main.show_photo', photo_id=photo.id), sender.username)
+    notification = Notification(message=message, receiver=photo.author)
+    db.session.add(notification)
+    db.session.commit()
+
+
+def push_invite_accept_notification(photo, sender, receipt_url, amount):
+    print(type(amount))
+    message = '<a href="%s" > Dr %s  has been hired for you.</a> You paid <a href="%s">%.2f $ </a> for this.' % \
+              (url_for('main.show_photo', photo_id=photo.id), sender.username,receipt_url,amount)
+    notification = Notification(message=message, receiver=photo.author)
+    db.session.add(notification)
+    db.session.commit()

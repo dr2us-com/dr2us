@@ -5,20 +5,30 @@
     :copyright: © 2018 Grey Li <withlihui@gmail.com>
     :license: MIT, see LICENSE for more details.
 """
-import os
 
-from flask import render_template, flash, redirect, url_for, current_app, \
-    send_from_directory, request, abort, Blueprint
+import requests
+import stripe
+from flask import render_template, flash, redirect, send_from_directory, request, abort, Blueprint
 from flask_login import login_required, current_user
 from sqlalchemy.sql.expression import func
 
+from albumy import settings
 from albumy.decorators import confirm_required, permission_required
-from albumy.extensions import db
+from albumy.emails import send_invite_email
 from albumy.forms.main import DescriptionForm, TagForm, CommentForm
-from albumy.models import User, Photo, Tag, Follow, Collect, Comment, Notification,Doctor
-from albumy.notifications import push_comment_notification, push_collect_notification
-from albumy.utils import rename_image, resize_image, redirect_back, flash_errors
+from albumy.models import *
+from albumy.notifications import *
+from albumy.settings import Operations
+from albumy.utils import rename_image, resize_image, redirect_back, flash_errors, generate_token
 
+os.environ['SECRET_KEY'] = settings.BaseConfig.STRIPE_SECRET_KEY
+os.environ['PUBLISHABLE_KEY'] = settings.BaseConfig.STRIPE_PUBLISH_KEY
+stripe_keys = {
+    'secret_key': os.environ['SECRET_KEY'],
+    'publishable_key': os.environ['PUBLISHABLE_KEY']
+}
+
+stripe.api_key = stripe_keys['secret_key']
 main_bp = Blueprint('main', __name__)
 
 
@@ -49,8 +59,8 @@ def index():
 
         tags = Tag.query.join(Tag.photos).group_by(Tag.id).order_by(func.count(Photo.id).desc()).limit(10)
         doctors = Doctor.query.all()
-        if(current_user.role.name == 'Doctor'):
-            if(current_user.doctor.address == '' or current_user.doctor.cv =='' or current_user.doctor.speciality == ''):
+        if current_user.role.name == 'Doctor':
+            if current_user.doctor.address == '' or current_user.doctor.cv == '' or current_user.doctor.speciality == '':
                 return redirect(url_for('user.edit_doctor_info'))
             pagination = current_user.following.paginate(page, per_page)
             followings = pagination.items
@@ -58,9 +68,10 @@ def index():
             awards_value = 0
             for award in awards:
                 awards_value = awards_value + award.rate_value
-            return render_template('main/doctor_index.html', pagination=pagination, followings=followings, tags=tags,awards_value = awards_value,doctors=doctors)
-        if(current_user.role.name == 'Patient'):
-            return redirect(url_for('user.index',username=current_user.username))
+            return render_template('main/doctor_index.html', pagination=pagination, followings=followings, tags=tags,
+                                   awards_value=awards_value, doctors=doctors)
+        if current_user.role.name == 'Patient':
+            return redirect(url_for('user.index', username=current_user.username))
             # photos = current_user.photos
             # photos_id_list = [item.id for item in photos]
 
@@ -69,24 +80,27 @@ def index():
             # return render_template('main/patient_index.html', pagination=pagination, comments=comments, tags=tags,photos = photos,doctors=doctors)
         else:
             pagination = Photo.query \
-            .join(Follow, Follow.followed_id == Photo.author_id) \
-            .filter(Follow.follower_id == current_user.id) \
-            .order_by(Photo.timestamp.desc()) \
-            .paginate(page, per_page)
+                .join(Follow, Follow.followed_id == Photo.author_id) \
+                .filter(Follow.follower_id == current_user.id) \
+                .order_by(Photo.timestamp.desc()) \
+                .paginate(page, per_page)
             photos = pagination.items
             return render_template('main/index.html', pagination=pagination, photos=photos, tags=tags)
     else:
         pagination = None
         followings = None
 
-    
     return render_template('main/index.html')
 
 
 @main_bp.route('/agreement')
 def agreement():
-    
     return render_template('main/agreement.html')
+
+
+@main_bp.route('/terms')
+def terms():
+    return render_template('main/terms.html')
 
 
 @main_bp.route('/explore')
@@ -165,7 +179,6 @@ def get_avatar(filename):
     return send_from_directory(current_app.config['AVATARS_SAVE_PATH'], filename)
 
 
-
 @main_bp.route('/upload', methods=['GET', 'POST'])
 @login_required
 @confirm_required
@@ -189,21 +202,150 @@ def upload():
 
 
 @main_bp.route('/photo/<int:photo_id>')
+@login_required
+@confirm_required
 def show_photo(photo_id):
     photo = Photo.query.get_or_404(photo_id)
     page = request.args.get('page', 1, type=int)
     per_page = current_app.config['ALBUMY_COMMENT_PER_PAGE']
     pagination = Comment.query.with_parent(photo).order_by(Comment.timestamp.asc()).paginate(page, per_page)
     comments = pagination.items
-
     comment_form = CommentForm()
     description_form = DescriptionForm()
     tag_form = TagForm()
 
     description_form.description.data = photo.description
-    return render_template('main/photo.html', photo=photo, comment_form=comment_form,
-                           description_form=description_form, tag_form=tag_form,
-                           pagination=pagination, comments=comments)
+    if current_user.role.name != 'Doctor':
+        doctors_leave_comment = []
+        doctor_ids_leave_comment = []
+        for comment in photo.comments:
+            print(comment.author)
+            if not comment.author in doctors_leave_comment:
+                doctors_leave_comment.append(comment.author)
+                doctor_ids_leave_comment.append(comment.author.id)
+        doctors_not_leave_comment = User.query.join(Role).filter(Role.name == 'Doctor').filter(
+            ~User.id.in_(doctor_ids_leave_comment)).all()
+
+        return render_template('main/photo.html', photo=photo, comment_form=comment_form,
+                               description_form=description_form, tag_form=tag_form,
+                               pagination=pagination, comments=comments, doctors_leave_comment=doctors_leave_comment,
+                               doctors_not_leave_comment=doctors_not_leave_comment)
+    else:
+        invite = photo.invites.filter(Invite.user_id == current_user.id).first()
+        return render_template('main/photo.html', photo=photo, comment_form=comment_form,
+                               description_form=description_form, tag_form=tag_form,
+                               pagination=pagination, comments=comments, invite=invite)
+
+
+@main_bp.route('/photo/<int:photo_id>/hire', methods=['POST'])
+@login_required
+@confirm_required
+def send_hire_request(photo_id):
+    photo = Photo.query.get_or_404(photo_id)
+    user = User.query.get_or_404(request.form['doctor_id'])
+    token_id = request.form['stripeToken']
+    Invite.query.filter(Invite.photo_id == photo.id, Invite.user_id == user.id, Invite.status == False).delete()
+    invite = Invite(photo=photo, user=user, token_id=token_id)
+    db.session.add(invite)
+    db.session.commit()
+    flash('Your request has been sent! You will pay 109$ when doctor accept your request.', 'success')
+    push_invite_notification(photo, user)
+    return redirect(url_for('.show_photo', photo_id=photo_id))
+
+
+@main_bp.route('/invite/<int:invite_id>/hire', methods=['POST'])
+@login_required
+@confirm_required
+def accept_hire_request(invite_id):
+    invite = Invite.query.get_or_404(invite_id)
+    invite.status = True
+    try:
+        amount = current_app.config['APPLICATION_FEE'] + current_app.config['DOCTOR_PAYMENT']
+        application_fee = current_app.config['APPLICATION_FEE']
+        doctor = current_user.doctor
+        if doctor.acct_id:
+            charge = stripe.Charge.create(
+                amount=amount,
+                currency="usd",
+                source=invite.token_id,
+                application_fee_amount=application_fee,
+                stripe_account=doctor.acct_id,
+            )
+            if not charge['paid']:
+                flash('You can\'t Accept the Hire Request. Unexpected error is issued.', 'error')
+                invite.delete()
+                db.session.delete(invite)
+                push_reinvite_notification(invite.photo, current_user)
+
+            else:
+                flash('Congratulations! You got payment accepting the hire request.', 'success')
+                invite.status = True
+                receipt_url = charge.receipt_url
+                amount = charge.amount
+                transaction = Transaction(patient_name=invite.photo.author.username,
+                                          doctor_name=invite.user.username,
+                                          token_id=invite.token_id,
+                                          acct_id=invite.user.doctor.acct_id,
+                                          amount=str(amount),
+                                          currency=charge.currency,
+                                          balance_transaction=charge.balance_transaction)
+                db.session.add(transaction)
+                push_invite_accept_notification(invite.photo, current_user, receipt_url, amount / 100)
+        else:
+            stripe_oauth_url = "https://connect.stripe.com/oauth/authorize?response_type=code&client_id=%s&scope=read_write" % \
+                               current_app.config['STRIPE_CLIENT_ID']
+            return redirect(stripe_oauth_url)
+
+        db.session.commit()
+
+    except Exception as e:
+        print(e)
+        flash('Unexpected error has been issued. Contact the Support', 'error')
+        db.session.remove()
+
+    return redirect(url_for('.show_photo', photo_id=invite.photo_id))
+
+
+@main_bp.route('/stripe_redirect/')
+@login_required
+@confirm_required
+def stripe_redirect():
+    error = request.args.get('error')
+    if error:
+        flash(request.args.get('error_description'), 'error')
+    else:
+        code = request.args.get('code')
+        res = requests.post('https://connect.stripe.com/oauth/token',
+                            data={'client_secret': current_app.config['STRIPE_SECRET_KEY'],
+                                  'code': code,
+                                  'grant_type': 'authorization_code'
+                                  })
+        print(res.json())
+        res = res.json()
+        error = res.get('error')
+        if error:
+            flash(res.get('error_description'), 'error')
+        else:
+            if current_user.role.name == 'Doctor':
+                current_user.doctor.acct_id = res['stripe_user_id']
+                db.session.commit()
+                flash('You have connected the stripe account. Now You can get payment.', 'success')
+    return redirect('/')
+
+
+@main_bp.route('/photo/<int:photo_id>/admire', methods=['POST'])
+@login_required
+@confirm_required
+def send_email_to_admire_doctor(photo_id):
+    photo = Photo.query.get_or_404(photo_id)
+    token_id = request.form['stripeToken']
+    to = request.form['email']
+    doctor_name = request.form['name']
+    mail_token = generate_token(photo.author, Operations.Invite_Doctor, expire_in=None, stripe_token_id=token_id,
+                                photo_id=photo_id, email=to, sender_name = photo.author.username)
+    send_invite_email(photo.author, mail_token, to, doctor_name=doctor_name)
+    flash('The Email has been sent to the Doctor %s' % doctor_name, 'success')
+    return redirect(url_for('.show_photo', photo_id=photo_id))
 
 
 @main_bp.route('/photo/n/<int:photo_id>')

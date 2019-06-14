@@ -22,6 +22,7 @@ def send_mail(to, subject, template, **kwargs):
     message = Message(current_app.config['ALBUMY_MAIL_SUBJECT_PREFIX'] + subject, recipients=[to])
     message.body = render_template(template + '.txt', **kwargs)
     message.html = render_template(template + '.html', **kwargs)
+    print(message.html, message.body)
     app = current_app._get_current_object()
     thr = Thread(target=_send_async_mail, args=[app, message])
     thr.start()
@@ -38,3 +39,8 @@ def send_reset_password_email(user, token):
 
 def send_change_email_email(user, token, to=None):
     send_mail(subject='Change Email Confirm', to=to or user.email, template='emails/change_email', user=user, token=token)
+
+
+def send_invite_email(patient_user, token, to, doctor_name):
+    send_mail(subject='Invitation', to=to, template='emails/invite_email', user=patient_user,
+              token=token, doctor_name=doctor_name)

@@ -1,0 +1,27 @@
+{% extends 'base.html' %}
+{% from 'bootstrap/pagination.html' import render_pagination %}
+{% from 'macros.html' import user_card with context %}
+
+{% block title %}{{ user.name }}'s following{% endblock %}
+
+{% block content %}
+    {% include 'user/_header.html' %}
+    <div class="row">
+        <div class="col-md-12">
+            {% if invites|length > 0  %}
+                {% for invite in invites %}
+                    <a href="{{ url_for('main.show_photo',photo_id = invite.photo_id) }}"><p class="ml-4">You have received the invite request from <strong>{{ invite.photo.author.name }}</strong></p></a>
+                {% endfor %}
+            {% else %}
+                <div class="tip">
+                    <h3>No Invites.</h3>
+                </div>
+            {% endif %}
+        </div>
+    </div>
+    {% if invites|length != 1 %}
+        <div class="page-footer">
+            {{ render_pagination(pagination) }}
+        </div>
+    {% endif %}
+{% endblock %}

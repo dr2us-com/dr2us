@@ -5,16 +5,17 @@
     :copyright: © 2018 Grey Li <withlihui@gmail.com>
     :license: MIT, see LICENSE for more details.
 """
-from flask import render_template, flash, redirect, url_for, Blueprint
+from flask import Markup
+from flask import render_template, flash, redirect, url_for, Blueprint, request
 from flask_login import login_user, logout_user, login_required, current_user, login_fresh, confirm_login
 
 from albumy.emails import send_confirm_email, send_reset_password_email
 from albumy.extensions import db
 from albumy.forms.auth import LoginForm, RegisterForm, ForgetPasswordForm, ResetPasswordForm
-from albumy.models import User,Doctor
-from albumy.fakes import fake,fake_hospital_cv
+from albumy.models import User, Doctor, Invite, Photo
+from albumy.notifications import push_invite_notification
 from albumy.settings import Operations
-from albumy.utils import generate_token, validate_token, redirect_back
+from albumy.utils import generate_token, validate_token, redirect_back, validate_invite_token
 
 auth_bp = Blueprint('auth', __name__)
 
@@ -61,10 +62,16 @@ def logout():
 
 @auth_bp.route('/register', methods=['GET', 'POST'])
 def register():
+    invite_token = request.args.get('token')
+    data = None
+    if invite_token:
+        data = validate_invite_token(invite_token)
     if current_user.is_authenticated:
-        return redirect(url_for('main.index')) 
-
-    form = RegisterForm()
+        return redirect(url_for('main.index'))
+    if data:
+        form = RegisterForm(email=data['email'], role='Doctor')
+    else:
+        form = RegisterForm()
     if form.validate_on_submit():
         name = form.name.data
         email = form.email.data.lower()
@@ -72,27 +79,31 @@ def register():
         password = form.password.data
         user = User(name=name, email=email, username=username)
         user.set_role_with_name(form.role.data)
-        if(form.role.data == 'Doctor'):
+        if form.role.data == 'Doctor':
             doctor = Doctor()
-            # doctor = Doctor(cv = fake_hospital_cv(),
-            #                 speciality = fake.word(),
-            #                 address=fake.address())
             user.doctor = doctor
-        # elif(form.role.data == 'Patient'):
-        #     patient = Patient(chief_complaint = fake.sentence(),
-        #                     present_illness = fake.sentence(),
-        #                     past_history=fake.sentence(),
-        #                     diagnosis = fake.sentence(),
-        #                     family_history = fake.sentence())
-        #     user.patient = patient
         user.set_password(password)
         db.session.add(user)
         db.session.commit()
+        try:
+            photo = Photo.query.get(data['photo_id'])
+            if photo:
+                invite = Invite(photo_id=data['photo_id'], user=user, token_id=data['stripe_token_id'])
+                db.session.add(invite)
+                push_invite_notification(photo, user)
+            else:
+                flash(
+                    'Unfortunately the photo that you have to comment has been removed by'+ Markup(' <a href="%s">owner</a>. ' % url_for(
+                        'user.index', username=data['sender_name'])), 'warning')
+        except Exception as e:
+            db.session.remove()
         token = generate_token(user=user, operation='confirm')
         send_confirm_email(user=user, token=token)
         flash('Confirm email sent, check your inbox.', 'info')
         return redirect(url_for('.login'))
-    return render_template('auth/register.html', form=form)
+    if data:
+        flash('Welcome! You will help many people on this site.', 'info')
+    return render_template('auth/register.html', form=form, invite_token=invite_token)
 
 
 @auth_bp.route('/confirm/<token>')

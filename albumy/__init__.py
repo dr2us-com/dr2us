@@ -79,6 +79,14 @@ def register_template_context(app):
 
 
 def register_errorhandlers(app):
+
+    @app.teardown_request   # automatically roll back db session when issue is occured on db.session.commit()
+    def teardown_request(exception):
+        print("tear down")
+        if exception:
+            db.session.rollback()
+        db.session.remove()
+
     @app.errorhandler(400)
     def bad_request(e):
         return render_template('errors/400.html'), 400

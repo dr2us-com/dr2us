@@ -22,6 +22,7 @@ class Operations:
     CONFIRM = 'confirm'
     RESET_PASSWORD = 'reset-password'
     CHANGE_EMAIL = 'change-email'
+    Invite_Doctor = 'invite-doctor'
 
 
 class BaseConfig:
@@ -70,8 +71,13 @@ class BaseConfig:
     DROPZONE_ENABLE_CSRF = True
 
     WHOOSHEE_MIN_STRING_LEN = 1
-    GOOGLE_MAP_API_KEY = 'Your Api Key'
     GOOGLE_MAP_API_KEY = 'AIzaSyBzxpp0TIeope2vBgZjqDNHdz-xJYbQcyo'
+    STRIPE_SECRET_KEY = 'sk_test_vV6OOnOoM4zwGEwHJjp3x0JW00MDi0t1fp'
+    STRIPE_PUBLISH_KEY = 'pk_test_chPsNBmXjKsxDGQG7CgjjBVh00EeC85bwL'
+    APPLICATION_FEE = 900
+    DOCTOR_PAYMENT = 10000
+    STRIPE_CLIENT_ID = 'ca_FF3OXEz2BakCTbsH5Q32Ao3ZZU2xe4Ec'
+
 
 class DevelopmentConfig(BaseConfig):
     SQLALCHEMY_DATABASE_URI = \

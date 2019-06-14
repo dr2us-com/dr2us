@@ -10,7 +10,8 @@
         </a>
     </div>
     <div class="col-md-9">
-        <h1>{{ user.name }}
+        <h1>{% if user.role.name == 'Doctor' %} Dr. {% endif %}
+            {{ user.name }}
             <small class="text-muted">{{ user.username }}</small>
         </h1>
         {% if user.bio %}<p>{{ user.bio }}</p>{% endif %}
@@ -77,5 +78,8 @@
         {{ render_nav_item('user.show_following', 'Following', user.following.count() - 1, username=user.username) }}
         {{ render_nav_item('user.show_followers', 'Follower', user.followers.count() - 1, username=user.username) }}
         {{ render_nav_item('user.tags', 'Tags', username=user.username) }}
+        {% if user.role.name == 'Doctor' %}
+            {{ render_nav_item('user.show_invites', 'Invites',user.invites.count(), username=user.username) }}
+        {% endif %}
     </ul>
 </div>

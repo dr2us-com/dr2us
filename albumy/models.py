@@ -6,6 +6,7 @@
     :license: MIT, see LICENSE for more details.
 """
 import os
+import random
 from datetime import datetime
 
 from flask import current_app
@@ -14,7 +15,6 @@ from flask_login import UserMixin
 from werkzeug.security import generate_password_hash, check_password_hash
 
 from albumy.extensions import db, whooshee
-import random
 
 # relationship table
 roles_permissions = db.Table('roles_permissions',
@@ -40,10 +40,10 @@ class Role(db.Model):
         roles_permissions_map = {
             # 'Locked': ['FOLLOW', 'COLLECT'],
             # 'User': ['FOLLOW', 'COLLECT', 'COMMENT', 'UPLOAD'],
-            'Doctor': ['FOLLOW', 'COLLECT', 'COMMENT', 'UPLOAD',],
-            'Patient': ['FOLLOW', 'COLLECT', 'UPLOAD','RATE'],
+            'Doctor': ['FOLLOW', 'COLLECT', 'COMMENT', 'UPLOAD', ],
+            'Patient': ['FOLLOW', 'COLLECT', 'UPLOAD', 'RATE'],
             # 'Moderator': ['FOLLOW', 'COLLECT', 'COMMENT', 'UPLOAD', 'MODERATE'],
-            'Administrator': ['FOLLOW', 'COLLECT', 'COMMENT', 'UPLOAD', 'MODERATE', 'ADMINISTER','RATE']
+            'Administrator': ['FOLLOW', 'COLLECT', 'COMMENT', 'UPLOAD', 'MODERATE', 'ADMINISTER', 'RATE']
         }
 
         for role_name in roles_permissions_map:
@@ -84,15 +84,17 @@ class Collect(db.Model):
     collector = db.relationship('User', back_populates='collections', lazy='joined')
     collected = db.relationship('Photo', back_populates='collectors', lazy='joined')
 
+
 class Doctor(db.Model):
     cv = db.Column(db.String(150))  # the hospital name that doctor works.
-    address = db.Column(db.String(200)) # the address of hospital.
+    address = db.Column(db.String(200))  # the address of hospital.
     speciality = db.Column(db.String(150))
-    latitude = db.Column(db.String(20),default='35.392426')
-    longitude = db.Column(db.String(20),default='139.476048')
-    status = db.Column(db.String(20),default = 'BAD')
-    id = db.Column(db.Integer,db.ForeignKey('user.id'),primary_key = True)
-    
+    latitude = db.Column(db.String(20), default='35.392426')
+    longitude = db.Column(db.String(20), default='139.476048')
+    status = db.Column(db.String(20), default='BAD')
+    acct_id = db.Column(db.String(250))
+    id = db.Column(db.Integer, db.ForeignKey('user.id'), primary_key=True)
+
 
 # class Patient(db.Model):
 #     chief_complaint = db.Column(db.String(300))
@@ -101,17 +103,43 @@ class Doctor(db.Model):
 #     family_history = db.Column(db.String(300))
 #     diagnosis = db.Column(db.String(300))
 #     id = db.Column(db.Integer,db.ForeignKey('user.id'),primary_key = True)
-    
+
 # rater award the star to the user that has same id as awarded_id 
 class Rate(db.Model):
     id = db.Column(db.Integer, primary_key=True)
-    rate_value = db.Column(db.Integer(),default=0)
+    rate_value = db.Column(db.Integer(), default=0)
     timestamp = db.Column(db.DateTime, default=datetime.utcnow)
     rater_photo_id = db.Column(db.Integer, db.ForeignKey('photo.id'))
     awarded_id = db.Column(db.Integer, db.ForeignKey('user.id'))
-    
-    rater_photo = db.relationship('Photo',foreign_keys=[rater_photo_id],back_populates='rates')
-    awarded = db.relationship('User',foreign_keys=[awarded_id],back_populates='awards')
+
+    rater_photo = db.relationship('Photo', foreign_keys=[rater_photo_id], back_populates='rates')
+    awarded = db.relationship('User', foreign_keys=[awarded_id], back_populates='awards')
+
+
+class Invite(db.Model):  # user_id(doctor) has been invited to the photo_id.
+    id = db.Column(db.Integer, primary_key=True)
+    photo_id = db.Column(db.Integer, db.ForeignKey('photo.id'))
+    photo = db.relationship('Photo', foreign_keys=[photo_id], back_populates='invites')
+    user_id = db.Column(db.Integer, db.ForeignKey('user.id'))
+    user = db.relationship('User', foreign_keys=[user_id], back_populates='invites')
+    status = db.Column(db.Boolean, default=False)
+    token_id = db.Column(db.String, nullable=False)
+    created_at = db.Column(db.DateTime, default=datetime.now)
+    updated_at = db.Column(db.DateTime, default=datetime.now, onupdate=datetime.now)
+
+
+class Transaction(db.Model):
+    id = db.Column(db.Integer, primary_key=True)
+    patient_name = db.Column(db.String(250))
+    doctor_name = db.Column(db.String(250))
+    token_id = db.Column(db.String(250))
+    acct_id = db.Column(db.String(250))
+    amount = db.Column(db.String(250))
+    currency = db.Column(db.String(250))
+    balance_transaction = db.Column(db.String(250))
+    created_at = db.Column(db.DateTime, default=datetime.now)
+    updated_at = db.Column(db.DateTime, default=datetime.now, onupdate=datetime.now)
+
 
 
 @whooshee.register_model('name', 'username')
@@ -129,7 +157,8 @@ class User(db.Model, UserMixin):
     avatar_m = db.Column(db.String(64))
     avatar_l = db.Column(db.String(64))
     avatar_raw = db.Column(db.String(64), default='default.jpg')
-    avatar_raw2 = db.Column(db.String(64),default='default2.jpg')
+    avatar_raw2 = db.Column(db.String(64), default='default2.jpg')
+
 
     confirmed = db.Column(db.Boolean, default=False)
     locked = db.Column(db.Boolean, default=False)
@@ -151,10 +180,14 @@ class User(db.Model, UserMixin):
                                 lazy='dynamic', cascade='all')
     followers = db.relationship('Follow', foreign_keys=[Follow.followed_id], back_populates='followed',
                                 lazy='dynamic', cascade='all')
-    
-    awards = db.relationship('Rate', foreign_keys=[Rate.awarded_id], back_populates='awarded', cascade='all', lazy='dynamic')
-# added for doctor and patient
-    doctor = db.relationship('Doctor',backref = 'user', cascade='all, delete-orphan',uselist=False)
+
+    awards = db.relationship('Rate', foreign_keys=[Rate.awarded_id], back_populates='awarded', cascade='all',
+                             lazy='dynamic')
+    # added for doctor and patient
+    doctor = db.relationship('Doctor', backref='user', cascade='all, delete-orphan', uselist=False)
+    invites = db.relationship('Invite', foreign_keys=[Invite.user_id], back_populates='user', cascade='all',
+                              lazy='dynamic')
+
     # patient = db.relationship('Patient',backref = 'user', cascade='all, delete-orphan',uselist=False)
 
     def __init__(self, **kwargs):
@@ -162,11 +195,13 @@ class User(db.Model, UserMixin):
         self.generate_avatar()
         self.follow(self)  # follow self
         self.set_role()
+
     def spec(self):
         if self.role.name == 'Doctor':
             return self.doctor
         elif self.role.name == 'Patient':
             return self.patient
+
     def set_password(self, password):
         self.password_hash = generate_password_hash(password)
 
@@ -175,15 +210,17 @@ class User(db.Model, UserMixin):
             if self.email == current_app.config['ALBUMY_ADMIN_EMAIL']:
                 self.role = Role.query.filter_by(name='Administrator').first()
             else:
-                randint = random.randint(1,2)
+                randint = random.randint(1, 2)
                 if randint == 1:
                     self.role = Role.query.filter_by(name='Doctor').first()
                 if randint == 2:
                     self.role = Role.query.filter_by(name='Patient').first()
             # db.session.commit()
-    def set_role_with_name(self,name):
+
+    def set_role_with_name(self, name):
         self.role = Role.query.filter_by(name=name).first()
         # db.session.commit()
+
     def validate_password(self, password):
         return check_password_hash(self.password_hash, password)
 
@@ -209,16 +246,16 @@ class User(db.Model, UserMixin):
 
     # def get_rate_rated_by(self,user):        
     #     return self.awards.filter_by(rater_id = user.id).first()
-    def get_rate_rated_by(self,photo):        
-        return self.awards.filter_by(rater_photo_id = photo.id).first()
+    def get_rate_rated_by(self, photo):
+        return self.awards.filter_by(rater_photo_id=photo.id).first()
 
     @property
     def followed_photos(self):
         return Photo.query.join(Follow, Follow.followed_id == Photo.author_id).filter(Follow.follower_id == self.id)
+
     @property
     def last_uploaded_photo(self):
         return Photo.query.filter(Photo.author_id == self.id).order_by(Photo.timestamp.desc()).first()
-    
 
     def collect(self, photo):
         if not self.is_collecting(photo):
@@ -261,7 +298,6 @@ class User(db.Model, UserMixin):
         self.avatar_l = filenames[2]
         # db.session.commit()
 
-        
     def tags(self):
         photos = self.photos
         ret_tags = []
@@ -271,6 +307,7 @@ class User(db.Model, UserMixin):
                 if not tag in ret_tags:
                     ret_tags.append(tag)
         return ret_tags
+
     @property
     def is_admin(self):
         return self.role.name == 'Administrator'
@@ -302,11 +339,14 @@ class Photo(db.Model):
     flag = db.Column(db.Integer, default=0)
     author_id = db.Column(db.Integer, db.ForeignKey('user.id'))
 
-    rates = db.relationship('Rate', foreign_keys=[Rate.rater_photo_id], back_populates='rater_photo', cascade='all', lazy='dynamic') # get the rate data that are given by this photo user
+    rates = db.relationship('Rate', foreign_keys=[Rate.rater_photo_id], back_populates='rater_photo', cascade='all',
+                            lazy='dynamic')  # get the rate data that are given by this photo user
     author = db.relationship('User', back_populates='photos')
     comments = db.relationship('Comment', back_populates='photo', cascade='all')
     collectors = db.relationship('Collect', back_populates='collected', cascade='all')
     tags = db.relationship('Tag', secondary=tagging, back_populates='photos')
+    invites = db.relationship('Invite', foreign_keys=[Invite.photo_id], back_populates='photo', cascade='all',
+                              lazy='dynamic')
 
 
 @whooshee.register_model('name')
@@ -361,4 +401,3 @@ def delete_photos(**kwargs):
         path = os.path.join(current_app.config['ALBUMY_UPLOAD_PATH'], filename)
         if os.path.exists(path):  # not every filename map a unique file
             os.remove(path)
-

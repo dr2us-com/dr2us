@@ -1,0 +1,8 @@
+Dear {{ doctor_name }},
+
+The Patient {{user.name}} asks you to provide the second medical opinion on our site.
+You will charge 100$ if you provide the opinions.
+Please click Below link to provide the second opinons.
+    {{ url_for('auth.register', token=token, _external=True) }}
+
+(Please do not reply to this notification, this inbox is not monitored.)

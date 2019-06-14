@@ -121,3 +121,223 @@
         {% endif %}
     </div>
 </div>
+{% if current_user.role.name != 'Doctor' %}
+    <div class="card bg-light mb-3 w-100">
+        <div class="card-body">
+            <h5 class="card-title"> Doctors who leave comment </h5>
+            <ul class="list-group list-group-flush">
+                {%  for doctor in doctors_leave_comment %}
+                    <li class="list-group-item" style="display: flex; justify-content: space-between">
+                        <div>Dr. {{ doctor.name }}</div>
+                        <button class="btn btn-outline-primary btn-sm ml-2" data-id = "{{ doctor.id }}" data-toggle="modal" data-target="#stripe-modal" onclick="show_hire_modal(this)">Hire</button>
+                    </li>
+                {% endfor %}
+            </ul>
+        </div>
+    </div>
+    <div class="card bg-light mb-3 w-100">
+        <div class="card-body">
+            <h5 class="card-title"> Invite Doctors to Leave Comment </h5>
+            <ul class="list-group list-group-flush">
+                {%  for doctor in doctors_not_leave_comment %}
+                    <li class="list-group-item" style="display: flex; justify-content: space-between">
+                        <div>Dr. {{ doctor.name }}</div>
+                        <button class="btn btn-outline-primary btn-sm ml-2" data-id = "{{ doctor.id }}" data-toggle="modal" data-target="#stripe-modal" onclick="show_hire_modal(this)">Hire</button>
+                    </li>
+                {% endfor %}
+            </ul>
+        </div>
+    </div>
+    <div class="card bg-light mb-3 w-100">
+        <div class="card-body">
+            <h5 class="card-title"> Doctors You admire </h5>
+            <form id="admire-form" action="{{ url_for('.send_email_to_admire_doctor',photo_id=photo.id) }}" method="post">
+                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                <div class="form-group row">
+                    <label class="col-xl-3" for="name">Name</label>
+                    <div class="col-xl-9">
+                        <input class="form-control" type="text" name="name" id="name" required>
+                    </div>
+
+                </div>
+                <div class="form-group row">
+                    <label class="col-xl-3 pr-2" for="hospital">Hospital</label>
+                    <div class="col-xl-9">
+                        <input class="form-control" type="text" name="hospital" id="hospital" required>
+                    </div>
+                </div>
+                <div class="form-group row">
+                    <label class="col-xl-3" for="email">Email</label>
+                    <div class="col-xl-9">
+                        <input class="form-control" type="email" name="email" id="email" required>
+                    </div>
+                </div>
+                <div class="form-group row">
+                    <div id="admire-card-element" class="w-100">
+                      <!-- A Stripe Element will be inserted here. -->
+                    </div>
+                    <div id="admire-card-errors" role="alert"></div>
+                </div>
+                <div style="text-align:right;">
+                    <button type="submit" class="btn btn-primary">Submit</button>
+                </div>
+
+            </form>
+        </div>
+    </div>
+
+    <script src="https://js.stripe.com/v3/"></script>
+    <div id="stripe-modal" class="modal fade">
+        <div class="modal-dialog modal-dialog-centered" role="document">
+            <div class="modal-content">
+              <div class="modal-header">
+                <h5 class="modal-title" id="exampleModalLongTitle">Credit or Debit Card</h5>
+                <button type="button" class="close" data-dismiss="modal" aria-label="Close">
+                  <span aria-hidden="true">&times;</span>
+                </button>
+              </div>
+              <div class="modal-body">
+                <form action="{{ url_for('.send_hire_request',photo_id=photo.id)}}" method="post" id="payment-form">
+                  <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                  <input type="hidden" name="doctor_id" id="hidden_doctor_id">
+                  <div class="form-row">
+                    <div id="card-element" class="w-100">
+                      <!-- A Stripe Element will be inserted here. -->
+                    </div>
+
+                    <!-- Used to display form errors. -->
+                    <div id="card-errors" role="alert"></div>
+                  </div>
+                </form>
+              </div>
+              <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-dismiss="modal">Cancel</button>
+                <button type="button" class="btn btn-primary" onclick="hire_click()">Hire</button>
+              </div>
+            </div>
+        </div>
+    </div>
+
+    <script type="text/javascript">
+                // Create a Stripe client.
+          var stripe = Stripe("{{ config.STRIPE_PUBLISH_KEY  }}");
+
+          // Create an instance of Elements.
+          var elements = stripe.elements();
+
+          // Custom styling can be passed to options when creating an Element.
+          // (Note that this demo uses a wider set of styles than the guide below.)
+          var style = {
+            base: {
+              color: '#32325d',
+              fontFamily: '"Helvetica Neue", Helvetica, sans-serif',
+              fontSmoothing: 'antialiased',
+              fontSize: '16px',
+              '::placeholder': {
+                color: '#aab7c4'
+              }
+            },
+            invalid: {
+              color: '#fa755a',
+              iconColor: '#fa755a'
+            }
+          };
+
+          // Create an instance of the card Element.
+          var card = elements.create('card', {style: style});
+
+          // Add an instance of the card Element into the `card-element` <div>.
+          card.mount('#card-element');
+
+          // Handle real-time validation errors from the card Element.
+          card.addEventListener('change', function(event) {
+            var displayError = document.getElementById('card-errors');
+            if (event.error) {
+              displayError.textContent = event.error.message;
+            } else {
+              displayError.textContent = '';
+            }
+          });
+
+          // Handle form submission.
+    //      var form = document.getElementById('payment-form');
+    //      form.addEventListener('submit', function(event) {
+    //        event.preventDefault();
+    //        console.log("On Submit");
+    //      });
+
+          // Submit the form with the token ID.
+          function stripeTokenHandler(token) {
+            // Insert the token ID into the form so it gets submitted to the server
+            var form = document.getElementById('payment-form');
+            var hiddenInput = document.createElement('input');
+            hiddenInput.setAttribute('type', 'hidden');
+            hiddenInput.setAttribute('name', 'stripeToken');
+            hiddenInput.setAttribute('value', token.id);
+            form.appendChild(hiddenInput);
+
+            // Submit the form
+            form.submit();
+          }
+    </script>
+    <script>
+        let elements1 = stripe.elements();
+        let card1 = elements1.create('card', {style: style});
+        card1.mount('#admire-card-element');
+        card1.addEventListener('change', function(event) {
+            let displayError = document.getElementById('admire-card-errors');
+            if (event.error) {
+              displayError.textContent = event.error.message;
+            } else {
+              displayError.textContent = '';
+            }
+          });
+        var form = document.getElementById('admire-form');
+        form.addEventListener('submit', function(event) {
+            event.preventDefault();
+            console.log("On Submit");
+            stripe.createToken(card1).then(function(result) {
+              if (result.error) {
+                // Inform the user if there was an error.
+                var errorElement = document.getElementById('admire-card-errors');
+                errorElement.textContent = result.error.message;
+              } else {
+                // Send the token to your server.
+                var form = document.getElementById('admire-form');
+                var hiddenInput = document.createElement('input');
+                hiddenInput.setAttribute('type', 'hidden');
+                hiddenInput.setAttribute('name', 'stripeToken');
+                hiddenInput.setAttribute('value', result.token.id);
+                form.appendChild(hiddenInput);
+
+                // Submit the form
+                form.submit();
+              }
+            });
+
+        });
+
+    </script>
+    <script>
+        function hire_click(e){
+            console.log(e);
+            console.log("Hire Button Clicked");
+            stripe.createToken(card).then(function(result) {
+              if (result.error) {
+                // Inform the user if there was an error.
+                var errorElement = document.getElementById('card-errors');
+                errorElement.textContent = result.error.message;
+              } else {
+                // Send the token to your server.
+                stripeTokenHandler(result.token);
+              }
+            });
+        }
+        function show_hire_modal(e) {
+            console.log(e);
+            var doctor_id = e.getAttribute('data-id')
+            var hidden_doctor = document.getElementById('hidden_doctor_id');
+            hidden_doctor.value = doctor_id;
+        }
+    </script>
+{% endif %}

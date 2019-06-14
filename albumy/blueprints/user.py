@@ -12,8 +12,8 @@ from albumy.decorators import confirm_required, permission_required
 from albumy.emails import send_change_email_email
 from albumy.extensions import db, avatars
 from albumy.forms.user import EditProfileForm, UploadAvatarForm, CropAvatarForm, ChangeEmailForm, \
-    ChangePasswordForm, NotificationSettingForm, PrivacySettingForm, DeleteAccountForm,EditDoctorInfoForm
-from albumy.models import User, Photo, Collect,Comment,Rate
+    ChangePasswordForm, NotificationSettingForm, PrivacySettingForm, DeleteAccountForm, EditDoctorInfoForm
+from albumy.models import User, Photo, Collect, Rate
 from albumy.notifications import push_follow_notification
 from albumy.settings import Operations
 from albumy.utils import generate_token, validate_token, redirect_back, flash_errors, get_geo_code_from_address
@@ -43,6 +43,7 @@ def tags(username):
     tags = user.tags()
     return render_template('user/tags.html', user=user, tags=tags)
 
+
 # deprecated by Lee.
 # @user_bp.route('/<username>/opinions')
 # def opinions(username): # shows the comments that current user give to the username's photo.
@@ -71,17 +72,16 @@ def show_collections(username):
 @login_required
 @confirm_required
 @permission_required('RATE')
-def rate(photo_id,username):
-    awarded_user = User.query.filter_by(username=username).first_or_404()    
+def rate(photo_id, username):
+    awarded_user = User.query.filter_by(username=username).first_or_404()
     print("======")
     print(request.values)
     rating_value = request.form.get('rating', 0, type=int)
     rater_photo = Photo.query.get_or_404(photo_id)
-    rate = Rate(rater_photo = rater_photo,awarded = awarded_user,rate_value = rating_value)
+    rate = Rate(rater_photo=rater_photo, awarded=awarded_user, rate_value=rating_value)
     db.session.add(rate)
     db.session.commit()
     return redirect_back()
-
 
 
 @user_bp.route('/follow/<username>', methods=['POST'])
@@ -134,6 +134,16 @@ def show_following(username):
     return render_template('user/following.html', user=user, pagination=pagination, follows=follows)
 
 
+@user_bp.route('/<username>/invites')
+def show_invites(username):
+    user = User.query.filter_by(username=username).first_or_404()
+    page = request.args.get('page', 1, type=int)
+    per_page = current_app.config['ALBUMY_USER_PER_PAGE']
+    print(user.invites)
+    pagination = user.invites.paginate(page, per_page)
+    invites = pagination.items
+    return render_template('user/invites.html', user=user, pagination=pagination, invites=invites)
+
 @user_bp.route('/settings/profile', methods=['GET', 'POST'])
 @login_required
 def edit_profile():
@@ -160,12 +170,12 @@ def edit_profile():
 @confirm_required
 def edit_doctor_info():
     form = EditDoctorInfoForm()
-    doctor = current_user.doctor    
+    doctor = current_user.doctor
     if form.validate_on_submit():
         doctor.cv = form.cv.data
         doctor.address = form.address.data
         doctor.speciality = form.speciality.data
-        location,status = get_geo_code_from_address(doctor.address)
+        location, status = get_geo_code_from_address(doctor.address)
         if status != 'NOT FOUND':
             doctor.latitude = location[0]
             doctor.longitude = location[1]
@@ -229,8 +239,7 @@ def crop_avatar():
 def change_avatar2():
     upload_form = UploadAvatarForm()
     crop_form = CropAvatarForm()
-    return render_template('user/settings/change_avatar.html', upload_form=upload_form, crop_form=crop_form,sequence=2)
-
+    return render_template('user/settings/change_avatar.html', upload_form=upload_form, crop_form=crop_form, sequence=2)
 
 
 @user_bp.route('/settings/avatar2/upload', methods=['POST'])

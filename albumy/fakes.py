@@ -14,7 +14,7 @@ from flask import current_app
 from sqlalchemy.exc import IntegrityError
 
 from albumy.extensions import db
-from albumy.models import User, Photo, Tag, Comment, Notification,Doctor,Role
+from albumy.models import User, Photo, Tag, Comment, Notification, Doctor, Role
 
 fake = Faker()
 

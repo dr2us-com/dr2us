@@ -7,7 +7,9 @@
 """
 import os
 import uuid
+
 import googlemaps
+
 try:
     from urlparse import urlparse, urljoin
 except ImportError:
@@ -46,7 +48,13 @@ def generate_token(user, operation, expire_in=None, **kwargs):
     data.update(**kwargs)
     return s.dumps(data)
 
-
+def validate_invite_token (token):
+    s = Serializer(current_app.config['SECRET_KEY'])
+    try:
+        data = s.loads(token)
+        return data
+    except (SignatureExpired, BadSignature):
+        return None
 def validate_token(user, token, operation, new_password=None):
     s = Serializer(current_app.config['SECRET_KEY'])
 

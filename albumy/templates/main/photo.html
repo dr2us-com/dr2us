@@ -31,6 +31,13 @@
                     <button type="submit" class="btn btn-link btn-sm">Report</button>
                 </form>
             {% endif %}
+            {% if invite and current_user.role.name == 'Doctor'%}
+                <form class="inline" method="post" action="{{ url_for('.accept_hire_request',invite_id = invite.id) }}">
+                    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                    <button type="submit" class="btn btn-secondary btn-sm"> Accept Hire</button>
+                </form>
+
+            {% endif %}
             <p class="text-muted float-right small">
                 <span class="oi oi-clock"></span> Upload at {{ moment(photo.timestamp).format('LL') }}
             </p>
