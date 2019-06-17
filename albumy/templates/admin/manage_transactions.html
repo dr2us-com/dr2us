@@ -1,0 +1,52 @@
+{% extends 'admin/index.html' %}
+{% from 'bootstrap/pagination.html' import render_pagination %}
+
+{% block title %}Transactions{% endblock %}
+
+{% block content %}
+    <nav aria-label="breadcrumb">
+        <ol class="breadcrumb">
+            {{ render_breadcrumb_item('admin.index', 'Dashboard Home') }}
+            {{ render_breadcrumb_item('admin.show_transaction', 'Transactions') }}
+        </ol>
+    </nav>
+    <div class="page-header">
+        <h1>Transactions
+            <small class="text-muted">{{ pagination.total }}</small>
+        </h1>
+    </div>
+    {% if transactions %}
+        <table class="table table-striped">
+            <thead>
+            <tr>
+                <th>From</th>
+                <th>To</th>
+                <th>Currency</th>
+                <th>Amount</th>
+                <th>Transaction ID</th>
+                <th>Date</th>
+
+            </tr>
+            </thead>
+            {% for transaction in transactions %}
+                <tr>
+                    <td>{{ transaction.patient_name }}</td>
+                    <td>{{ transaction.doctor_name }}</td>
+                    <td>
+                        {{ transaction.currency }}
+                    </td>
+                    <td> {{(transaction.amount|int)/100}}
+                    </td>
+                    <td>
+                        {{ transaction.balance_transaction }}
+                    </td>
+                    <td>{{ transaction.flag }}</td>
+                    <td>{{ moment(transaction.created_at).format('LL') }}</td>
+                </tr>
+            {% endfor %}
+        </table>
+        <div class="page-footer">{{ render_pagination(pagination) }}</div>
+    {% else %}
+        <div class="tip"><h5>No Transactions.</h5></div>
+    {% endif %}
+{% endblock %}

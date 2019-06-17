@@ -11,7 +11,7 @@ from flask_login import login_required
 from albumy.decorators import admin_required, permission_required
 from albumy.extensions import db
 from albumy.forms.admin import EditProfileAdminForm
-from albumy.models import Role, User, Tag, Photo, Comment
+from albumy.models import Role, User, Tag, Photo, Comment, Transaction
 from albumy.utils import redirect_back
 
 admin_bp = Blueprint('admin', __name__)
@@ -33,6 +33,17 @@ def index():
                            tag_count=tag_count, comment_count=comment_count, locked_user_count=locked_user_count,
                            blocked_user_count=blocked_user_count, reported_comments_count=reported_comments_count,
                            reported_photos_count=reported_photos_count)
+
+
+@admin_bp.route('/transactions', methods=['GET', 'POST'])
+@login_required
+@admin_required
+def show_transaction():
+    page = request.args.get('page', 1, type=int)
+    per_page = current_app.config['ALBUMY_MANAGE_USER_PER_PAGE']
+    pagination = Transaction.query.order_by(Transaction.created_at.desc()).paginate(page, per_page)
+    transactions = pagination.items
+    return render_template('admin/manage_transactions.html', pagination=pagination, transactions=transactions)
 
 
 @admin_bp.route('/profile/<int:user_id>', methods=['GET', 'POST'])
@@ -78,7 +89,7 @@ def block_user(user_id):
         flash('Permission denied.', 'warning')
     else:
         user.block()
-        flash('Account blocked.', 'info')
+        flash('Account    .', 'info')
     return redirect_back()
 
 
