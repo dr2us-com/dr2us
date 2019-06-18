@@ -7,10 +7,15 @@
 {% block content %}
     {% include 'user/_header.html' %}
     <div class="row">
-        <div class="col-md-12">
+        <div class="col-md-9">
+
             {% if invites|length > 0  %}
                 {% for invite in invites %}
-                    <a href="{{ url_for('main.show_photo',photo_id = invite.photo_id) }}"><p class="ml-4">You have received the invite request from <strong>{{ invite.photo.author.name }}</strong></p></a>
+                    {% if invite.status %}
+                       <p class="ml-4">You have received the invite request from <strong>{{ invite.photo.author.name }}</strong></p>
+                    {% else %}
+                        <a href="{{ url_for('main.show_photo',photo_id = invite.photo_id) }}"><p class="ml-4">You have received the invite request from <strong>{{ invite.photo.author.name }}</strong></p></a>
+                    {% endif %}
                 {% endfor %}
             {% else %}
                 <div class="tip">

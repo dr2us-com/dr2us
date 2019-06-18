@@ -231,7 +231,7 @@ def show_photo(photo_id):
                                pagination=pagination, comments=comments, doctors_leave_comment=doctors_leave_comment,
                                doctors_not_leave_comment=doctors_not_leave_comment)
     else:
-        invite = photo.invites.filter(Invite.user_id == current_user.id).first()
+        invite = photo.invites.filter(Invite.user_id == current_user.id,Invite.status == False).first()
         return render_template('main/photo.html', photo=photo, comment_form=comment_form,
                                description_form=description_form, tag_form=tag_form,
                                pagination=pagination, comments=comments, invite=invite)
