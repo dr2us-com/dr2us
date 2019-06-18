@@ -221,8 +221,8 @@ def show_photo(photo_id):
         for comment in photo.comments:
             print(comment.author)
             if not comment.author in doctors_leave_comment:
-                doctors_leave_comment.append(comment.author)
                 if comment.author.role.name == 'Doctor':
+                    doctors_leave_comment.append(comment.author)
                     doctor_ids_leave_comment.append(comment.author.id)
         doctors_not_leave_comment = User.query.join(Role).filter(Role.name == 'Doctor').filter(
             ~User.id.in_(doctor_ids_leave_comment)).all()
