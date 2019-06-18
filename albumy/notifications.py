@@ -38,8 +38,8 @@ def push_collect_notification(collector, photo_id, receiver):
 
 
 def push_invite_notification(photo, receiver):
-    message = '<a href="%s" > You have received the invite request from "%s" </a>' % \
-              (url_for('main.show_photo', photo_id=photo.id), photo.author.username)
+    message = '<a href="%s" > You have received the invite request from "%s" for Photo %d </a>' % \
+              (url_for('main.show_photo', photo_id=photo.id), photo.author.username, photo.id)
     notification = Notification(message=message, receiver=receiver)
     db.session.add(notification)
     db.session.commit()
