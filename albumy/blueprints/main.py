@@ -296,7 +296,7 @@ def accept_hire_request(invite_id):
             push_reinvite_notification(invite.photo, current_user)
 
         else:
-            flash('Congratulations! You got payment accepting the hire request.', 'success')
+            
             invite.status = True
             receipt_url = charge.receipt_url
             amount = charge.amount
@@ -320,7 +320,7 @@ def accept_hire_request(invite_id):
             db.session.add(transaction)
             push_invite_accept_notification(invite.photo, current_user, receipt_url, amount / 100)
         db.session.commit()
-
+        flash('Congratulations! You got payment accepting the hire request.', 'success')
     except Exception as e:
         print(e)
         flash('Unexpected error has been issued. Contact the Support', 'error')
