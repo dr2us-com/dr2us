@@ -301,6 +301,8 @@ def accept_hire_request(invite_id):
             receipt_url = charge.receipt_url
             amount = charge.amount
             if payment_method == 'manual':
+                if not doctor.balance:
+                    doctor.balance = current_app.config['DOCTOR_PAYMENT']/100
                 doctor.balance += current_app.config['DOCTOR_PAYMENT']/100                
                 description = 'Doctor Request the manual Payment. As a result, doctor\'s account balance increase by 100 and Admin Stripe Account balance increase by 109';
                 doctor_name = 'Admin'
