@@ -1,0 +1,66 @@
+{% extends 'admin/index.html' %}
+{% from 'bootstrap/pagination.html' import render_pagination %}
+
+{% block title %}Manage Withdrawals{% endblock %}
+
+{% block content %}
+    <nav aria-label="breadcrumb">
+        <ol class="breadcrumb">
+            {{ render_breadcrumb_item('admin.index', 'Dashboard Home') }}
+            {{ render_breadcrumb_item('admin.manage_withdraws', 'Manage Withdrawals') }}
+        </ol>
+    </nav>
+    <div class="page-header">
+        <h1>Withdrawals
+            <small class="text-muted">{{ pagination.total }}</small>
+        </h1>
+    </div>
+    {% if withdraws %}
+        <table class="table table-striped">
+            <thead>
+            <tr>
+                <th>Requester</th>
+                <th>Amount</th>
+                <th>Bank Code</th>
+                <th>Branch Code</th>
+                <th>Account Number</th>
+                <th>Additional Bank Info</th>
+                <th>Requested At</th>
+                <th>Status</th>
+                <th>Actions</th>
+            </tr>
+            </thead>
+            {% for withdraw in withdraws %}
+                <tr>
+                    <td><a href="{{ url_for('user.index', username=withdraw.doctor.user.username) }}">{{ withdraw.doctor.user.name }}</a></td>
+                    <td>
+                        {{ withdraw.amount }}
+                    </td>
+                    <td>
+                        {{ withdraw.bank_code }}
+                    </td>
+                    <td>{{ withdraw.branch_code }}</td>
+                    <td> {{ withdraw.account_number }}</td>
+                    <td style="white-space: nowrap;  overflow: hidden; text-overflow: ellipsis; max-width: 300px;"> {{ withdraw.additional_bank_info}} </td>
+                    <td>{{ moment(withdraw.created_at).format('LLL') }}</td>
+                    <td> 
+                        {% if withdraw.status %} 
+                        <span class="badge badge-success">Verified</span>
+                            
+                        {% else %}
+                            <span class="badge badge-info">Pending</span>
+                        {% endif %}
+                    </td>
+                    <td>
+                        {% if withdraw.status == False %}
+                        <a href="{{url_for('admin.edit_withdraws',withdraw_id = withdraw.id)}}"> Edit </a>
+                        {% endif %}
+                    </td>
+                </tr>
+            {% endfor %}
+        </table>
+        <div class="page-footer">{{ render_pagination(pagination) }}</div>
+    {% else %}
+        <div class="tip"><h5>No Withdrawals.</h5></div>
+    {% endif %}
+{% endblock %}

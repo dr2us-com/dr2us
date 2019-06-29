@@ -1,0 +1,43 @@
+{% extends 'base.html' %}
+{% from 'bootstrap/form.html' import render_form %}
+{% block title %} Withdraw {% endblock %}
+
+{% block styles %}
+	{{ super() }}
+    <style type="text/css">
+        textarea{
+        	font-size:40px;
+        	height: 150px;
+        }
+        .card-label{
+            color: #131150;
+            font-weight: bold;
+        }
+    </style>
+{% endblock %}
+{% block content %}
+    {% if withdraw %}
+        <div class="card w-100 bg-light">
+            <h3 class="card-header">Pending Withdrawals</h3>
+            <div class="card-body text-success">
+                <p class="card-text"> <span class="card-label" >Amount:</span> {{withdraw.amount}} $ </p>
+                <p class="card-text"> <span class="card-label">Bank Code :</span> {{ withdraw.bank_code }} </p>
+                <p class="card-text"> <span class="card-label">Branch Code : </span>{{ withdraw.branch_code }} </p>
+                <p class="card-text"> <span class="card-label">Account Number:</span> {{ withdraw.account_number }} </p>
+                <p class="card-text"> <span class="card-label">Additional Bank Info:</span> {{ withdraw.additional_bank_info}} </p>
+                {% if withdraw.status == False %}                            
+                    <p class="card-text"> <span class="card-label">Status:</span> <span class="badge badge-info">Pending</span> </p>
+                {% endif %}
+                <p class="card-text"> <span class="card-label">Requested At:</span> {{ moment(withdraw.created_at).format('LLL') }} </p>
+
+            </div>
+        </div>   
+    {% else %}
+        <div class="card w-100 bg-light">
+            <h3 class="card-header">Edit Profile</h3>
+            <div class="card-body">
+                {{ render_form(form) }}
+            </div>
+        </div>    
+    {% endif %}
+{% endblock %}

@@ -5,13 +5,13 @@
     :copyright: © 2018 Grey Li <withlihui@gmail.com>
     :license: MIT, see LICENSE for more details.
 """
-from flask import render_template, flash, Blueprint, request, current_app
-from flask_login import login_required
+from flask import render_template, flash, Blueprint, request, current_app,redirect,url_for
+from flask_login import login_required,current_user
 
 from albumy.decorators import admin_required, permission_required
 from albumy.extensions import db
 from albumy.forms.admin import EditProfileAdminForm
-from albumy.models import Role, User, Tag, Photo, Comment, Transaction
+from albumy.models import Role, User, Tag, Photo, Comment, Transaction, WithDraw, Notification
 from albumy.utils import redirect_back
 
 admin_bp = Blueprint('admin', __name__)
@@ -44,6 +44,53 @@ def show_transaction():
     pagination = Transaction.query.order_by(Transaction.created_at.desc()).paginate(page, per_page)
     transactions = pagination.items
     return render_template('admin/manage_transactions.html', pagination=pagination, transactions=transactions)
+
+
+@admin_bp.route('/withdraws', methods=['GET'])
+@login_required
+@admin_required
+def manage_withdraws():
+    page = request.args.get('page', 1, type=int)
+    per_page = current_app.config['ALBUMY_MANAGE_USER_PER_PAGE']
+    pagination = WithDraw.query.order_by(WithDraw.created_at.desc()).paginate(page, per_page)
+    withdraws = pagination.items
+    return render_template('admin/manage_withdraws.html', pagination=pagination, withdraws=withdraws)
+
+@admin_bp.route('/withdraws/<int:withdraw_id>', methods=['GET','POST'])
+@login_required
+@admin_required
+def edit_withdraws(withdraw_id):
+    withdraw = WithDraw.query.get_or_404(withdraw_id)
+    if request.method == 'GET':        
+        return render_template('admin/edit_withdraws.html',withdraw=withdraw)
+    if request.method == 'POST':
+        status = request.form['status']
+        if status == 'pending':
+            status = False
+        elif status == 'verified':
+            status = True
+        if withdraw.status == status:
+            return redirect(url_for('admin.manage_withdraws'))
+        withdraw.status = status
+        message = 'Requested the <a href="%s"> Withdraw </a> status has been updated.' % \
+              (url_for('main.withdraw'))
+        notification = Notification(message=message, receiver=withdraw.doctor.user)
+        db.session.add(notification)
+        if status == True:
+            user = withdraw.doctor.user
+            user.doctor.balance = user.doctor.balance - withdraw.amount
+            transaction = Transaction(patient_name=current_user.username,
+                                      doctor_name=user.username,
+                                      token_id='unknown',
+                                      acct_id='unknown',
+                                      amount=str(withdraw.amount*100),
+                                      currency='USD',
+                                      balance_transaction='unknown',
+                                      description='Admin Paid to the Doctor Manually')
+            db.session.add(transaction)
+        db.session.commit()
+        flash('WithDraw Status Has Been Changed','info')
+        return redirect(url_for('admin.manage_withdraws'))        
 
 
 @admin_bp.route('/profile/<int:user_id>', methods=['GET', 'POST'])

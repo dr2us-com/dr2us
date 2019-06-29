@@ -1,0 +1,53 @@
+{% extends 'admin/index.html' %}
+{% from 'bootstrap/pagination.html' import render_pagination %}
+
+{% block title %}Edit Withdraw{% endblock %}
+
+{% block content %}
+    <style type="text/css">
+        textarea{
+            font-size:40px;
+            height: 150px;
+        }
+        .card-label{
+            color: #131150;
+            font-weight: bold;
+        }
+    </style>
+    <nav aria-label="breadcrumb">
+        <ol class="breadcrumb">
+            {{ render_breadcrumb_item('admin.index', 'Dashboard Home') }}
+            {{ render_breadcrumb_item('admin.manage_withdraws', 'Manage Withdrawals') }}
+            {{ render_breadcrumb_item('admin.edit_withdraws', 'Edit Withdraw',withdraw_id=withdraw.id) }}
+        </ol>
+    </nav>
+    <div class="page-header">
+        <h1>Edit Withdraw
+            <a class="float-right btn btn-light" href="{{ url_for('user.index', username=withdraw.doctor.user.username) }}">Return
+                {{ withdraw.doctor.user.username }}'s homepage</a>
+        </h1>
+    </div>
+    <div class="card w-100 bg-light">
+        <h3 class="card-header">Edit Status</h3>
+        <div class="card-body text-success">
+            <p class="card-text"> <span class="card-label" >Amount:</span> {{withdraw.amount}} $ </p>
+            <p class="card-text"> <span class="card-label">Bank Code :</span> {{ withdraw.bank_code }} </p>
+            <p class="card-text"> <span class="card-label">Branch Code : </span>{{ withdraw.branch_code }} </p>
+            <p class="card-text"> <span class="card-label">Account Number:</span> {{ withdraw.account_number }} </p>
+            <p class="card-text"> <span class="card-label">Additional Bank Info:</span> {{ withdraw.additional_bank_info}} </p> 
+            <p class="card-text"> <span class="card-label">Requested At:</span> {{ moment(withdraw.created_at).format('LLL') }} 
+            <form method="post">
+                <div class="form-group required">
+                    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}"/>
+                    <label class="form-control-label card-label" for="status">Status</label>
+                    <select name = 'status' class="form-control" id='status' style="display: inline;width: auto;">
+                        <option value="pending"  {% if not withdraw.status %} selected {% endif %}> Pending </option>
+                        <option value="verified" {% if withdraw.status %} selected {% endif %}> Verified </option>
+                    </select> 
+                </div>
+                <input class="btn btn-secondary" id="submit" name="submit" type="submit" value="Update">
+            </form>
+            </p>
+        </div>
+    </div>        
+{% endblock %}

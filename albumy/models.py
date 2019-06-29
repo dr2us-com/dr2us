@@ -91,10 +91,25 @@ class Doctor(db.Model):
     speciality = db.Column(db.String(150))
     latitude = db.Column(db.String(20), default='35.392426')
     longitude = db.Column(db.String(20), default='139.476048')
-    status = db.Column(db.String(20), default='BAD')
-    acct_id = db.Column(db.String(250))
+    status = db.Column(db.String(20), default='BAD')    # represent status of the latitude and longitude, if it is flase, its values are not exact.
+    acct_id = db.Column(db.String(250))    
+    balance = db.Column(db.Float(),default=0.0)
+    withdraws = db.relationship('WithDraw',back_populates='doctor',cascade='all')
     id = db.Column(db.Integer, db.ForeignKey('user.id'), primary_key=True)
 
+
+class WithDraw(db.Model):
+    id = db.Column(db.Integer,primary_key = True)
+    status = db.Column(db.Boolean,default=False)
+    amount = db.Column(db.Float(),default=0.0)
+    bank_code = db.Column(db.String(255))
+    branch_code = db.Column(db.String(255))
+    account_number = db.Column(db.String(255))
+    additional_bank_info = db.Column(db.Text(1000))
+    created_at = db.Column(db.DateTime, default=datetime.now)
+    updated_at = db.Column(db.DateTime, default=datetime.now, onupdate=datetime.now)
+    doctor_id = db.Column(db.Integer, db.ForeignKey('doctor.id'))
+    doctor = db.relationship('Doctor', foreign_keys=[doctor_id], back_populates='withdraws')
 
 # class Patient(db.Model):
 #     chief_complaint = db.Column(db.String(300))
@@ -111,7 +126,6 @@ class Rate(db.Model):
     timestamp = db.Column(db.DateTime, default=datetime.utcnow)
     rater_photo_id = db.Column(db.Integer, db.ForeignKey('photo.id'))
     awarded_id = db.Column(db.Integer, db.ForeignKey('user.id'))
-
     rater_photo = db.relationship('Photo', foreign_keys=[rater_photo_id], back_populates='rates')
     awarded = db.relationship('User', foreign_keys=[awarded_id], back_populates='awards')
 
@@ -137,6 +151,7 @@ class Transaction(db.Model):
     amount = db.Column(db.String(250))
     currency = db.Column(db.String(250))
     balance_transaction = db.Column(db.String(250))
+    description = db.Column(db.String(250))
     created_at = db.Column(db.DateTime, default=datetime.now)
     updated_at = db.Column(db.DateTime, default=datetime.now, onupdate=datetime.now)
 

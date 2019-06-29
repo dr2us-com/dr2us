@@ -1,7 +1,5 @@
 {% extends 'base.html' %}
 {% from 'bootstrap/pagination.html' import render_pagination %}
-
-
 {% block title %}Home{% endblock %}
 {% block styles %}
     <link rel="stylesheet" href="{{ url_for('static', filename='css/animate.css') }}">
@@ -136,9 +134,6 @@
       // locate you.
       var map, infoWindow;
       function initMap() {
-        // var geo_location = {
-        //     lat: -34.397, lng: 150.644
-        // };
         var geo_location = {
             lat: {{current_user.doctor.latitude}},lng: {{current_user.doctor.longitude}}
         };
@@ -162,12 +157,7 @@
             });
             infowindow.open(map);
         }
-        
-      }
+    }
     </script>
     <script src="https://maps.googleapis.com/maps/api/js?key={{config['GOOGLE_MAP_API_KEY']}}&amp;callback=initMap" defer="" async=""> </script>
-
-
-    
-     
 {% endblock %}

@@ -13,9 +13,9 @@ from flask_login import login_required, current_user
 from sqlalchemy.sql.expression import func
 
 from albumy import settings
-from albumy.decorators import confirm_required, permission_required
+from albumy.decorators import confirm_required, permission_required, role_required
 from albumy.emails import send_invite_email
-from albumy.forms.main import DescriptionForm, TagForm, CommentForm
+from albumy.forms.main import DescriptionForm, TagForm, CommentForm, WithdrawForm
 from albumy.models import *
 from albumy.notifications import *
 from albumy.settings import Operations
@@ -60,7 +60,8 @@ def index():
         tags = Tag.query.join(Tag.photos).group_by(Tag.id).order_by(func.count(Photo.id).desc()).limit(10)
         doctors = Doctor.query.all()
         if current_user.role.name == 'Doctor':
-            if current_user.doctor.address == '' or current_user.doctor.cv == '' or current_user.doctor.speciality == '':
+            print("==============")            
+            if not (current_user.doctor.address and current_user.doctor.cv and current_user.doctor.speciality ):
                 return redirect(url_for('user.edit_doctor_info'))
             pagination = current_user.following.paginate(page, per_page)
             followings = pagination.items
@@ -68,8 +69,12 @@ def index():
             awards_value = 0
             for award in awards:
                 awards_value = awards_value + award.rate_value
+            print(current_user.doctor.balance)
+            balance = current_user.doctor.balance
+            if not current_user.doctor.balance:
+                balance = 0.00
             return render_template('main/doctor_index.html', pagination=pagination, followings=followings, tags=tags,
-                                   awards_value=awards_value, doctors=doctors)
+                                   awards_value=awards_value, doctors=doctors, balance = balance)
         if current_user.role.name == 'Patient':
             return redirect(url_for('user.index', username=current_user.username))
             # photos = current_user.photos
@@ -261,42 +266,57 @@ def accept_hire_request(invite_id):
     invite = Invite.query.get_or_404(invite_id)
     invite.status = True
     try:
+        payment_method = request.form['payment_method']
         amount = current_app.config['APPLICATION_FEE'] + current_app.config['DOCTOR_PAYMENT']
         application_fee = current_app.config['APPLICATION_FEE']
-        doctor = current_user.doctor
-        if doctor.acct_id:
+        doctor = current_user.doctor        
+        if payment_method == 'manual':
             charge = stripe.Charge.create(
                 amount=amount,
                 currency="usd",
                 source=invite.token_id,
-                application_fee_amount=application_fee,
-                stripe_account=doctor.acct_id,
             )
-            if not charge['paid']:
-                flash('You can\'t Accept the Hire Request. Unexpected error is issued.', 'error')
-                invite.delete()
-                db.session.delete(invite)
-                push_reinvite_notification(invite.photo, current_user)
-
+        elif payment_method == 'auto':
+            if doctor.acct_id:
+                charge = stripe.Charge.create(
+                    amount=amount,
+                    currency="usd",
+                    source=invite.token_id,
+                    application_fee_amount=application_fee,
+                    stripe_account=doctor.acct_id,
+                )
             else:
-                flash('Congratulations! You got payment accepting the hire request.', 'success')
-                invite.status = True
-                receipt_url = charge.receipt_url
-                amount = charge.amount
-                transaction = Transaction(patient_name=invite.photo.author.username,
-                                          doctor_name=invite.user.username,
-                                          token_id=invite.token_id,
-                                          acct_id=invite.user.doctor.acct_id,
-                                          amount=str(amount),
-                                          currency=charge.currency,
-                                          balance_transaction=charge.balance_transaction)
-                db.session.add(transaction)
-                push_invite_accept_notification(invite.photo, current_user, receipt_url, amount / 100)
-        else:
-            stripe_oauth_url = "https://connect.stripe.com/oauth/authorize?response_type=code&client_id=%s&scope=read_write" % \
-                               current_app.config['STRIPE_CLIENT_ID']
-            return redirect(stripe_oauth_url)
+                stripe_oauth_url = "https://connect.stripe.com/oauth/authorize?response_type=code&client_id=%s&scope=read_write" % \
+                           current_app.config['STRIPE_CLIENT_ID']
+                return redirect(stripe_oauth_url)
+        if not charge['paid']:
+            flash('You can\'t Accept the Hire Request. Unexpected error is issued.', 'error')
+            invite.delete()
+            db.session.delete(invite)
+            push_reinvite_notification(invite.photo, current_user)
 
+        else:
+            flash('Congratulations! You got payment accepting the hire request.', 'success')
+            invite.status = True
+            receipt_url = charge.receipt_url
+            amount = charge.amount
+            if payment_method == 'manual':
+                doctor.balance += current_app.config['DOCTOR_PAYMENT']/100                
+                description = 'Doctor Request the manual Payment. As a result, doctor\'s account balance increase by 100 and Admin Stripe Account balance increase by 109';
+                doctor_name = 'Admin'
+            elif payment_method == 'auto':
+                description = 'Doctor Request the Autopayment.As a result, Doctor will get payment directly through the stripe.'
+                doctor_name = invite.user.username
+            transaction = Transaction(patient_name=invite.photo.author.username,
+                                      doctor_name=doctor_name,
+                                      token_id=invite.token_id,
+                                      acct_id=invite.user.doctor.acct_id,
+                                      amount=str(amount),
+                                      currency=charge.currency,
+                                      balance_transaction=charge.balance_transaction,
+                                      description=description)
+            db.session.add(transaction)
+            push_invite_accept_notification(invite.photo, current_user, receipt_url, amount / 100)
         db.session.commit()
 
     except Exception as e:
@@ -306,6 +326,34 @@ def accept_hire_request(invite_id):
 
     return redirect(url_for('.show_photo', photo_id=invite.photo_id))
 
+@main_bp.route('/withdraw',methods=['POST','GET'])
+@login_required
+@role_required('Doctor')
+@confirm_required
+def withdraw():    
+    withdraw = WithDraw.query.filter( WithDraw.status == False).first()
+    form = WithdrawForm()
+    if form.validate_on_submit():
+        if not withdraw:
+            withdraw = WithDraw(amount = form.amount.data,
+                                bank_code = form.bank_code.data,
+                                branch_code = form.branch_code.data,
+                                account_number = form.account_number.data,
+                                additional_bank_info = form.additional_info.data,
+                                doctor = current_user.doctor
+                                )
+            db.session.add(withdraw)
+            admins = User.query.join(Role).filter(Role.name == 'Administrator').all()
+            message = 'Doctor <a href="%s"> %s </a> Requested the <a href="%s"> withdraw </a>' % (  url_for('user.index',username=current_user.username),
+                                                                                                    current_user.username,
+                                                                                                    url_for('admin.manage_withdraws')
+                                                                                                    )
+            for admin in admins:
+                notification = Notification(message=message, receiver=admin)
+                db.session.add(notification)
+            db.session.commit()
+        return redirect(url_for('.withdraw',form=form))
+    return render_template('main/withdraw.html', form=form,withdraw = withdraw)
 
 @main_bp.route('/stripe_redirect/')
 @login_required

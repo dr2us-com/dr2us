@@ -33,8 +33,12 @@
             {% endif %}
             {% if invite and current_user.role.name == 'Doctor'%}
                 <form class="inline" method="post" action="{{ url_for('.accept_hire_request',invite_id = invite.id) }}">
-                    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
-                    <button type="submit" class="btn btn-secondary btn-sm"> Accept Hire</button>
+                    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">         
+                    <button type="submit" class="btn btn-secondary btn-sm" > Accept Hire</button>
+                    <select class="form-control" style="display: inherit;width: auto;" name="payment_method"> 
+                        <option value="manual"> Manual Payment </option>
+                        <option value="auto"> Auto Payment </option>
+                    </select>    
                 </form>
 
             {% endif %}

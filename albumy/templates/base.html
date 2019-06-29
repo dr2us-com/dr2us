@@ -57,14 +57,29 @@
                         <a href="#" class="nav-link dropdown-toggle" data-toggle="dropdown" role="button"
                            aria-expanded="false">
                             <img class="avatar-xs"
-                                 src="{{ url_for('main.get_avatar', filename=current_user.avatar_s) }}">
-                            <span class="caret"></span>
+                                 src="{{ url_for('main.get_avatar', filename=current_user.avatar_s) }}">                            
+                            {% if current_user.doctor %}
+                                {% if current_user.doctor.balance %}
+                                    <span class="caret" style="color:rgb(16,16,16)">$ {{ current_user.doctor.balance }} USD</span>
+                                {% else %}
+                                    <span class="caret" style="color:rgb(16,16,16)">$ 0.0 USD</span>
+                                {% endif %}
+                            {% else %}
+                                <span class="caret"></span>
+                            {% endif %}
+
                         </a>
                         <div class="dropdown-menu dropdown-menu-right" role="menu">
                             <h6 class="dropdown-header">Logged in as {{ current_user.username }}</h6>
                             <a class="dropdown-item" href="{{ url_for('user.index', username=current_user.username) }}">
                                 <span class="oi oi-person"></span> My Home
                             </a>
+                            <div class="dropdown-divider"></div>
+                            {% if current_user.doctor %}
+                            <a class="dropdown-item" href="{{ url_for('main.withdraw') }}">
+                                <span class="oi oi-cart"></span> WithDraw Funds
+                            </a>
+                            {% endif %}
                             <div class="dropdown-divider"></div>
                             <a class="dropdown-item" href="{{ url_for('user.edit_profile') }}">
                                 <span class="oi oi-cog"></span> Settings
@@ -73,10 +88,12 @@
                                 <a class="dropdown-item" href="{{ url_for('admin.index') }}">
                                     <span class="oi oi-dashboard"></span> Dashboard
                                 </a>
-                            {% endif %}
+                            {% endif %}                            
                             <a class="dropdown-item" href="{{ url_for('auth.logout') }}">
                                 <span class="oi oi-power-standby"></span> Logout
                             </a>
+                            
+
                         </div>
                     </div>
                 {% else %}
