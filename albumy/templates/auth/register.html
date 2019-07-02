@@ -2,7 +2,15 @@
 {% from 'bootstrap/form.html' import render_form,form_errors,render_field %}
 
 {% block title %}Register{% endblock %}
-
+{% block styles %}
+    {{ super() }}
+    <style type="text/css">
+        input[type='checkbox']{
+            width: 20px;
+            height: 20px;
+        }
+    </style>
+{% endblock %}
 {% block content %}
     <div class="jumbotron">
         <div class="row">
