@@ -254,7 +254,8 @@ def send_hire_request(photo_id):
     invite = Invite(photo=photo, user=user, token_id=token_id)
     db.session.add(invite)
     db.session.commit()
-    flash('Your request has been sent! You will pay 109$ when doctor accept your request.', 'success')
+    amount = current_app.config['APPLICATION_FEE'] + current_app.config['DOCTOR_PAYMENT']
+    flash('Your request has been sent! You will pay %f$ when doctor accept your request.'%(amount,), 'success')
     push_invite_notification(photo, user)
     return redirect(url_for('.show_photo', photo_id=photo_id))
 
