@@ -85,6 +85,9 @@ def register():
         user.set_password(password)
         db.session.add(user)
         db.session.commit()
+        token = generate_token(user=user, operation='confirm')
+        send_confirm_email(user=user, token=token)
+        flash('Confirm email sent, check your inbox.', 'info')
         try:
             photo = Photo.query.get(data['photo_id'])
             if photo:
@@ -97,9 +100,6 @@ def register():
                         'user.index', username=data['sender_name'])), 'warning')
         except Exception as e:
             db.session.remove()
-        token = generate_token(user=user, operation='confirm')
-        send_confirm_email(user=user, token=token)
-        flash('Confirm email sent, check your inbox.', 'info')
         return redirect(url_for('.login'))
     if data:
         flash('Welcome! You will help many people on this site.', 'info')
