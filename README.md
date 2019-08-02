@@ -2,7 +2,7 @@
 
 *Capture and share every wonderful moment.*
 
-Demo: http://albumy.helloflask.com
+Live: https://www.dr2us.com 
 
 ![Screenshot](http://helloflask.com/screenshots/albumy.png)
 
