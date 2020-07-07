@@ -57,11 +57,13 @@ def index():
         page = request.args.get('page', 1, type=int)
         per_page = current_app.config['ALBUMY_PHOTO_PER_PAGE']
 
-        tags = Tag.query.join(Tag.photos).group_by(Tag.id).order_by(func.count(Photo.id).desc()).limit(10)
-        doctors = Doctor.query.all()
+        tags = Tag.query.join(Tag.photos).group_by(Tag.id).order_by(func.count(Photo.id).desc()).limit(10)        
         if current_user.role.name == 'Doctor':
-            print("==============")            
-            if not (current_user.doctor.address and current_user.doctor.cv and current_user.doctor.speciality ):
+            doctors = Doctor.query.all()
+            print("==============")
+            if not current_user.confirmed:
+                return redirect(url_for('user.index', username=current_user.username))
+            if not (current_user.doctor.address and current_user.doctor.cv and current_user.doctor.speciality):
                 return redirect(url_for('user.edit_doctor_info'))
             pagination = current_user.following.paginate(page, per_page)
             followings = pagination.items
@@ -82,7 +84,8 @@ def index():
 
             # pagination = Comment.query.filter(Comment.photo_id.in_(photos_id_list)).order_by(Comment.timestamp.desc()).paginate(page, per_page)
             # comments = pagination.items
-            # return render_template('main/patient_index.html', pagination=pagination, comments=comments, tags=tags,photos = photos,doctors=doctors)
+            # return render_template('main/patient_index.html', pagination=pagination,
+            # comments=comments, tags=tags,photos = photos,doctors=doctors)
         else:
             pagination = Photo.query \
                 .join(Follow, Follow.followed_id == Photo.author_id) \
@@ -237,7 +240,7 @@ def show_photo(photo_id):
                                pagination=pagination, comments=comments, doctors_leave_comment=doctors_leave_comment,
                                doctors_not_leave_comment=doctors_not_leave_comment)
     else:
-        invite = photo.invites.filter(Invite.user_id == current_user.id,Invite.status == False).first()
+        invite = photo.invites.filter(Invite.user_id == current_user.id, Invite.status == False).first()
         return render_template('main/photo.html', photo=photo, comment_form=comment_form,
                                description_form=description_form, tag_form=tag_form,
                                pagination=pagination, comments=comments, invite=invite)
@@ -255,7 +258,7 @@ def send_hire_request(photo_id):
     db.session.add(invite)
     db.session.commit()
     amount = current_app.config['APPLICATION_FEE'] + current_app.config['DOCTOR_PAYMENT']
-    flash('Your request has been sent! You will pay %f$ when doctor accept your request.'%(amount,), 'success')
+    flash('Your request has been sent! You will pay %f$ when doctor accept your request.' % (amount,), 'success')
     push_invite_notification(photo, user)
     return redirect(url_for('.show_photo', photo_id=photo_id))
 
@@ -270,7 +273,7 @@ def accept_hire_request(invite_id):
         payment_method = request.form['payment_method']
         amount = current_app.config['APPLICATION_FEE'] + current_app.config['DOCTOR_PAYMENT']
         application_fee = current_app.config['APPLICATION_FEE']
-        doctor = current_user.doctor        
+        doctor = current_user.doctor
         if payment_method == 'manual':
             charge = stripe.Charge.create(
                 amount=amount,
@@ -297,15 +300,15 @@ def accept_hire_request(invite_id):
             push_reinvite_notification(invite.photo, current_user)
 
         else:
-            
+
             invite.status = True
             receipt_url = charge.receipt_url
             amount = charge.amount
             if payment_method == 'manual':
                 if not doctor.balance:
-                    doctor.balance = current_app.config['DOCTOR_PAYMENT']/100
-                doctor.balance += current_app.config['DOCTOR_PAYMENT']/100                
-                description = 'Doctor Request the manual Payment. As a result, doctor\'s account balance increase by 100 and Admin Stripe Account balance increase by 109';
+                    doctor.balance = current_app.config['DOCTOR_PAYMENT'] / 100
+                doctor.balance += current_app.config['DOCTOR_PAYMENT'] / 100
+                description = 'Doctor Request the manual Payment. As a result, doctor\'s account balance increase by 100 and Admin Stripe Account balance increase by 109'
                 doctor_name = 'Admin'
             elif payment_method == 'auto':
                 description = 'Doctor Request the Autopayment.As a result, Doctor will get payment directly through the stripe.'
@@ -329,12 +332,13 @@ def accept_hire_request(invite_id):
 
     return redirect(url_for('.show_photo', photo_id=invite.photo_id))
 
-@main_bp.route('/withdraw',methods=['POST','GET'])
+
+@main_bp.route('/withdraw', methods=['POST', 'GET'])
 @login_required
 @role_required('Doctor')
 @confirm_required
-def withdraw():    
-    withdraw = WithDraw.query.filter( WithDraw.status == False).first()
+def withdraw():
+    withdraw = WithDraw.query.filter(WithDraw.status == False).first()
     form = WithdrawForm()
     if form.validate_on_submit():
         if not withdraw:
@@ -347,16 +351,18 @@ def withdraw():
                                 )
             db.session.add(withdraw)
             admins = User.query.join(Role).filter(Role.name == 'Administrator').all()
-            message = 'Doctor <a href="%s"> %s </a> Requested the <a href="%s"> withdraw </a>' % (  url_for('user.index',username=current_user.username),
+            message = 'Doctor <a href="%s"> %s </a> Requested the <a href="%s"> withdraw </a>' % (url_for('user.index', username=current_user.username),
                                                                                                     current_user.username,
-                                                                                                    url_for('admin.manage_withdraws')
+                                                                                                    url_for(
+                                                                                                        'admin.manage_withdraws')
                                                                                                     )
             for admin in admins:
                 notification = Notification(message=message, receiver=admin)
                 db.session.add(notification)
             db.session.commit()
-        return redirect(url_for('.withdraw',form=form))
-    return render_template('main/withdraw.html', form=form,withdraw = withdraw)
+        return redirect(url_for('.withdraw', form=form))
+    return render_template('main/withdraw.html', form=form, withdraw = withdraw)
+
 
 @main_bp.route('/stripe_redirect/')
 @login_required
